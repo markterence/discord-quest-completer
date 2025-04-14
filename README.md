@@ -2,7 +2,7 @@
 
 > Discord Quest Completer, Discord Rich Presence Simulator whatever. I don't know what to call this.
 
-A lightweight desktop application that simulates Discord Rich Presence for games without requiring installation of the actual games. Perfect for completing Discord Quests and showing off your gaming status without the storage burden.
+A lightweight desktop application that simulates Discord Rich Presence for games without requiring installation of the actual games. Perfect for completing Discord Quests and showing off your gaming status (kid's gonna love it) without the storage burden.
 
 ## Installation
 
