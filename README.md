@@ -44,9 +44,9 @@ There is also an experimental discord RPC functionality, it connects to Discord'
 
 Currently only Windows is supported. But I will try to add Linux support. I don't have a MacOS machine to test on so MacOS support is not gonna happen.
 
-The reason for not having Linux and MacOS support is that I need to really test it. I have a linux machine but for the game runners, I want to make sure that the dummy game runner have minimal size like around 100KB or less for each platforms. For Windows on example, I used Rust and `windows` crate to use Win32 API to create a dummy window, this compiles to a small 136KB executable. I also tried a C# .net app which is fantastically small its only 7KB but can't make it to where Discord can detect it.
+The reason for not having Linux and MacOS support right is that I want to make sure that the dummy game runner have minimal size like around 100KB or less for each platforms. For Windows on example, I used Rust and `windows` crate to use Win32 API to create a dummy window, this compiles to a small 136KB executable. I also tried a C# .net app which is fantastically small its only 7KB but can't make it to where Discord can detect it.
 
-For Linux, I don't know how to do that yet. I will try to explore more of what to use and make sure the runner binary is small.
+For Linux, I don't know where to start yet. I will try to explore more of what to use and make sure the runner binary is small and it's a pain (Wine, Proton, etc. How does discord detection work in linux. LMAO same for MacOS)
 
 ## TechStack
 
