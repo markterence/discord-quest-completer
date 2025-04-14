@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Tauri App",
+  "productName": "Discord Activity Handler",
   "version": "0.1.0",
   "identifier": "com.tauri-app.app",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Tauri App",
+        "title": "Discord Activity Handler",
         "width": 800,
         "height": 600
       }
