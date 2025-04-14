@@ -5,9 +5,7 @@ edition = "2021"
 description = "A background application for Discord rich presence with daemon mode support"
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
+eframe = "0.31.1"
 [[bin]]
 name = "discord-status-app"
 path = "src/main.rs"
