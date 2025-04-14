@@ -8,17 +8,26 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "build:all": "tauri build --release && cd ./src-template && tauri build --release && cd ... && cp ./src-template/target/release/discord-status-app.exe ./src-tauri/target/release/template.exe"
+    "build:template": "cd ./src-template && cargo build --release && cd ..",
+    "build:template:debug": "cd ./src-template && cargo build && cd ..",
+    "copy:template": "cp ./runner-go/WindowsFormsApp1.exe ./src-tauri/target/release/template.exe",
+    "copy:template:debug": "cp ./runner-go/WindowsFormsApp1.exe ./src-tauri/target/debug/template.exe",
+    "build:all": "tauri build && pnpm run build:template && pnpm run copy:template",
+    "tauri:dev": "tauri dev && pnpm run copy:template"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.3",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
+    "@vueuse/core": "^13.1.0",
+    "lodash-es": "^4.17.21",
+    "nanoid": "^5.1.5",
     "tailwindcss": "^4.1.3",
     "vue": "^3.5.13"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
+    "@types/lodash-es": "^4.17.12",
     "@vitejs/plugin-vue": "^5.2.1",
     "typescript": "~5.6.2",
     "vite": "^6.0.3",
