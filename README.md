@@ -6,7 +6,7 @@ A lightweight desktop application that simulates Discord Rich Presence for games
 
 ## Installation
 
-> No instructions yet. Can't build from source yet. I will add this later.
+> No instructions yet. Can't build from source yet. I will add this later and setup automation to release pre-built binaries.
 
 ## Features
 
