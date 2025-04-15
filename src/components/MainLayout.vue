@@ -1,8 +1,13 @@
 <script setup lang="ts">
+import { Pages, useGlobalState } from '@/composables/app-state';
 import IconRustLang from './IconRustLang.vue';
 import IconVueJs from './IconVueJs.vue';
 
 // Layout component for consistent page structure
+
+const appState = useGlobalState();
+const { page, setPage } = appState;
+
 </script>
 
 <template>
@@ -16,8 +21,23 @@ import IconVueJs from './IconVueJs.vue';
         <nav>
           <ul class="flex space-x-6">
             <li>
-              <a href="#" class="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Home</a>
+              <a href="#" 
+                class="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400"
+                :class="{ 'text-indigo-600 dark:text-indigo-400': page === Pages.HOME }"
+                @click.prevent="setPage(Pages.HOME)"
+              >
+                Home
+              </a>
             </li> 
+            <li>
+              <a href="#" 
+                class="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400"
+                :class="{ 'text-indigo-600 dark:text-indigo-400': page === Pages.PLAYGROUND }"
+                @click.prevent="setPage(Pages.PLAYGROUND)"
+              >
+                Playground
+              </a>
+            </li>
             <li>
               <a href="#" class="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Settings</a>
             </li>
