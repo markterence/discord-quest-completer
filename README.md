@@ -1,4 +1,4 @@
-# Discord Game Activity Simulator
+# Discord Game Activity / Discord Rich Presence
 
 > Discord Quest Completer, Discord Rich Presence Simulator whatever. I don't know what to call this.
 
@@ -83,6 +83,7 @@ pnpm tauri dev
 ```
 
 - Also make sure to copy the dummy game binary from `src-win` to the `src-tauri/target/release` and `src-tauri/target/debug` folder. This is where the Tauri app will look for the dummy game runner to run.
+- Get the list of detecatable games from the Discord API: `GET /api/applications/detectable` or `GET /api/:version/applications/detectable` and place the JSON file in `src/assets/gamelist.json`
 
 For the `src-win` the runner (dummy game):
 
