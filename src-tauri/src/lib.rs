@@ -4,8 +4,22 @@ use std::path::Path;
 use std::time::SystemTime;
 use std::sync::Mutex;
 use once_cell::sync::OnceCell;
+use serde::Deserialize;
 
 mod rpc;
+
+#[derive(Deserialize)]
+struct WatchingActivityParams {
+    app_id: String,
+    details: Option<String>,
+    state: Option<String>,
+    #[serde(rename = "largeImageKey")]
+    large_image_key: Option<String>,
+    #[serde(rename = "largeImageText")]
+    large_image_text: Option<String>,
+    timestamp: Option<i64>,
+    activity_kind: Option<i32>,
+}
 
 // Global static instance of the Discord client
 static DISCORD_CLIENT: OnceCell<Mutex<Option<rpc::Client>>> = OnceCell::new();
@@ -91,6 +105,91 @@ async fn stop_process(exec_name: String) -> Result<(), String> {
 }
 
 #[tauri::command(rename_all = "snake_case")]
+async fn set_activity(activity_json: String, state: String) -> Result<(), String> {
+    // Parse the JSON string into our struct
+    let params: WatchingActivityParams = serde_json::from_str(&activity_json)
+        .map_err(|e| format!("Failed to parse activity JSON: {}", e))?;
+    
+    let app_id_i64: i64 = params.app_id.parse().map_err(|e| {
+        format!("Failed to parse app ID: {}", e)
+    })?;
+    println!("activity_json is: {}", activity_json);
+    println!("state is: {}", state);
+
+    // if state is disconnect then disconnect the client and return
+    if state == "disconnect" {
+        let client_option = {
+            let mut client_guard = get_discord_client().lock().unwrap();
+            // Take the client out, leaving None in its place
+            client_guard.take()
+            // MutexGuard is dropped here at the end of scope
+        };
+        
+        // Now use the client without holding the MutexGuard
+        if let Some(client) = client_option {
+            client.discord.disconnect().await;
+        } else {
+            println!("No Discord client to disconnect");
+        }
+        
+        return Ok(());
+    }
+
+    let client = rpc::make_client(app_id_i64, rpc::ds::Subscriptions::ACTIVITY).await;
+
+    // Build the activity with optional fields from JSON
+    let mut rp = rpc::ds::activity::ActivityBuilder::default();
+
+    if let Some(activity_kind) = params.activity_kind {
+        if activity_kind == 0 {
+            rp = rp.kind(rpc::ds::activity::ActivityKind::Playing);
+        } else if activity_kind == 2 {
+            rp = rp.kind(rpc::ds::activity::ActivityKind::Listening);
+        } else if activity_kind == 3 {
+            rp = rp.kind(rpc::ds::activity::ActivityKind::Watching);
+        } else if activity_kind == 5 {
+            rp = rp.kind(rpc::ds::activity::ActivityKind::Competing);
+        }
+    } else {
+        rp = rp.kind(rpc::ds::activity::ActivityKind::Playing);
+    }
+    
+    let details = params.details.clone().unwrap_or_default();
+    if !details.is_empty() {
+        print!("Details is: {}", details);
+        rp = rp.details(&details);
+    }
+    if let Some(state) = params.state {
+        rp = rp.state(&state);
+    }
+
+    if let Some(timestamp) = params.timestamp {
+        rp = rp.start_timestamp(
+            timestamp as i64
+        );
+    }
+
+    if let Some(large_image_key) = params.large_image_key {
+       
+        rp = rp.assets(
+            rpc::ds::activity::Assets::default()
+            .large(&large_image_key, params.large_image_text.as_deref())
+        );
+    }
+    
+    client.discord.update_activity(rp).await.map_err(|e| {
+        format!("Failed to update activity: {}", e)
+    })?;
+
+    {
+        let mut client_guard = get_discord_client().lock().unwrap();
+        *client_guard = Some(client);
+    }
+    
+    Ok(())
+}
+
+#[tauri::command(rename_all = "snake_case")]
 async fn connect_to_discord_rpc(app_id: String, discord_state: String) -> Result<(), String> {
     println!("state is: {}", discord_state);
     // convert string to i64
@@ -147,6 +246,7 @@ pub fn run() {
             greet,
             create_fake_game, 
             connect_to_discord_rpc,
+            set_activity,
             stop_process,
             run_background_process])
         .run(tauri::generate_context!())
