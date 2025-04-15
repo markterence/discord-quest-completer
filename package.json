@@ -10,8 +10,8 @@
     "tauri": "tauri",
     "build:template": "cd ./src-template && cargo build --release && cd ..",
     "build:template:debug": "cd ./src-template && cargo build && cd ..",
-    "copy:template": "cp ./runner-go/WindowsFormsApp1.exe ./src-tauri/target/release/template.exe",
-    "copy:template:debug": "cp ./runner-go/WindowsFormsApp1.exe ./src-tauri/target/debug/template.exe",
+    "copy:template": "cp ./src-win/target/release/src-win.exe ./src-tauri/target/release/template.exe",
+    "copy:template:debug": "cp ./src-win/target/release/src-win.exe ./src-tauri/target/debug/template.exe",
     "build:all": "tauri build && pnpm run build:template && pnpm run copy:template",
     "tauri:dev": "tauri dev && pnpm run copy:template"
   },
