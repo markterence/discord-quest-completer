@@ -1,6 +1,6 @@
 [package]
 name = "discord-quest-completer"
-version = "2025.4.18"
+version = "25.4.18"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
