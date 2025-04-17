@@ -1,30 +1,12 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use std::env;
-use std::fmt::format;
 use std::path::Path;
-use std::time::SystemTime;
 use std::sync::Mutex;
 use once_cell::sync::OnceCell;
-use serde::Deserialize;
 use tauri::{path::BaseDirectory, AppHandle, Emitter, Listener, Manager};
-use tokio::sync::oneshot::channel;
-
 
 mod rpc;
 mod runner;
-
-#[derive(Deserialize)]
-struct WatchingActivityParams {
-    app_id: String,
-    details: Option<String>,
-    state: Option<String>,
-    #[serde(rename = "largeImageKey")]
-    large_image_key: Option<String>,
-    #[serde(rename = "largeImageText")]
-    large_image_text: Option<String>,
-    timestamp: Option<i64>,
-    activity_kind: Option<i32>,
-}
 
 // Global static instance of the Discord client
 static DISCORD_CLIENT: OnceCell<Mutex<Option<rpc::Client>>> = OnceCell::new();
