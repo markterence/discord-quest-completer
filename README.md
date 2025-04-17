@@ -20,11 +20,14 @@ https://github.com/user-attachments/assets/de904123-07df-41a9-8db1-ff05cc7ccc9b
 > Webview2 is required to run the app. WebView2 comes preinstalled on Windows 11. On versions older than Windows 11 you may need to install it manually.
 > If you don't have it installed, you can download it from [here](https://developer.microsoft.com/en-us/microsoft-edge/webview2).
 
-You can run follow the [development setup instructions](#Development Setup) to build the app from source.
+You can run follow the [development setup instructions](#Development-Setup) to build the app from source.
 
 Alternatively, you can download manually pre-built pre-release binaries from the [Releases](https://github.com/markterence/discord-activity/releases) page.
 
 - [discord-quest-completer-v.0.1.0-pre-release](https://github.com/markterence/discord-activity/commits/v0.1.0-pre-release)
+
+> Make sure you place or extract in a location where you have write or execute permissions. The reason for this is that the app will create dummy game file in the same directory.
+> By default, the app will not need to be run as administrator, unless if it was installed in a directory that requires elevated permissions. (e.g. `C:\Program Files\`, root of `C:\`, etc.)
 
 ## Uninstall
 
