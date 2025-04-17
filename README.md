@@ -4,7 +4,19 @@
 
 A desktop application that simulates Discord Rich Presence for games without requiring installation of the actual games. Perfect for completing Discord Quests and showing off your gaming status (discord kids gonna love it) without the storage burden.
 
-![discord-quest-handler.mp4](https://markterence.github.io/images/random-demo/discord-quest-handler.mp4)
+
+<!--
+Old attachments: Kept here since github dont provide way to remove/manage attached files.
+
+https://github.com/user-attachments/assets/34ff80c4-9e76-452c-9b02-e56f9ea706dd
+https://github.com/user-attachments/assets/de904123-07df-41a9-8db1-ff05cc7ccc9b
+-->
+
+
+
+https://github.com/user-attachments/assets/de904123-07df-41a9-8db1-ff05cc7ccc9b
+
+
 
 ## Installation
 
