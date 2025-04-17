@@ -24,6 +24,8 @@ You can run follow the [development setup instructions](#Development Setup) to b
 
 Alternatively, you can download manually pre-built pre-release binaries from the [Releases](https://github.com/markterence/discord-activity/releases) page.
 
+- [discord-quest-completer-v.0.1.0-pre-release](https://github.com/markterence/discord-activity/commits/v0.1.0-pre-release)
+
 ## Uninstall
 
 To uninstall the app, simply go to the folder where you extracted the app and delete the contents folder.
