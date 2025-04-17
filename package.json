@@ -8,10 +8,8 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "build:template": "cd ./src-template && cargo build --release && cd ..",
-    "build:template:debug": "cd ./src-template && cargo build && cd ..",
-    "copy:template": "cp ./src-win/target/release/src-win.exe ./src-tauri/target/release/template.exe",
-    "copy:template:debug": "cp ./src-win/target/release/src-win.exe ./src-tauri/target/debug/template.exe",
+    "build:runner:win": "cd ./src-win && cargo build --release && cd ..",
+    "copy:runner:win": "cp ./src-win/target/release/src-win.exe ./src-tauri/resources/src-win.exe",
     "build:all": "tauri build && pnpm run build:template && pnpm run copy:template",
     "tauri:dev": "tauri dev && pnpm run copy:template"
   },
