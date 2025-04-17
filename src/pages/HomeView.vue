@@ -11,6 +11,7 @@ import { isEmpty } from 'lodash-es';
 import GameExecutables from '@/components/GameExecutables.vue';
 import { GameActionsKey } from '@/constants/constants';
 import { path } from '@tauri-apps/api';
+import { emit } from '@tauri-apps/api/event';
 
 type DialogKey = 
     'none' | 
@@ -26,6 +27,7 @@ const dialogMessage = ref('');
 const isDialogOpen = ref(false);
 const dialogKey = ref<DialogKey>('none')
 const isConnectedToRPC = ref(false);
+const isConnecting = ref(false);
 
 // Search functionality
 const searchQuery = shallowRef('');
@@ -177,10 +179,10 @@ async function playGame({game, executable}: {game: Game, executable: GameExecuta
                 path_len: executable.segments,
                 app_id: Number(gameToPlay.id),
                 exec_path: path.join(executable.path!, executable.filename!),
-            }
+            } 
             await invoke('run_background_process', payload);
             gameToPlay.is_running = true;
-            executableItem.is_running = true;
+            executableItem.is_running = true; 
         }
         // In a real app, this would invoke a Tauri command to launch the game
        
@@ -214,7 +216,7 @@ function getExecutables(game: Game) {
     return game.executables.map(exe => exe.name)
 }
 
-function handleTestRPC(game: Game | null) {
+async function handleTestRPC(game: Game | null) {
     let state = isConnectedToRPC.value ? 'disconnect' : 'connect';
 
     console.log('Testing RPC for game:', game);
@@ -222,17 +224,26 @@ function handleTestRPC(game: Game | null) {
         showDialog('no_game_selected');
         return;
     }
-    if (state === 'disconnect') {
-        invoke('connect_to_discord_rpc', { app_id: "0", discord_state: "disconnect" })
+    if (state === 'disconnect' || isConnecting.value) {
+        // await invoke('connect_to_discord_rpc_2', { app_id: "0", discord_state: "disconnect" })
+        // invoke('connect_to_discord_rpc_3', {
+        //     activity_json: JSON.stringify({
+        //         app_id: selectedGame.value?.id
+        //     }),
+        //     action: 'disconnect',
+        // })
+        emit('event_disconnect');
+        
         isConnectedToRPC.value = false;
         game!.is_running = false;
         currentlyPlaying.value = null;
+        isConnecting.value = false;
         return;
     }
     showDialog('rpc_message_1');
 }
 
-function continueRPCRisk(game: Game | null) {
+async function continueRPCRisk(game: Game | null) {
     if (!game) {
         return;
     }
@@ -240,10 +251,21 @@ function continueRPCRisk(game: Game | null) {
     const gameToTest = gameList.value.find(g => g.uid === gameUid);
     if (gameToTest) {
         console.log('Testing RPC for game:', gameToTest);
-        invoke('connect_to_discord_rpc', { app_id: gameToTest.id, discord_state: "connect" })
-        isConnectedToRPC.value = true;
-        gameToTest.is_running = true;
-        currentlyPlaying.value = gameToTest.id;
+        isConnecting.value = true;
+        // invoke('connect_to_discord_rpc_2', { app_id: gameToTest.id, discord_state: "connect" })
+        invoke('connect_to_discord_rpc_3', {
+            activity_json: JSON.stringify({
+                app_id: gameToTest.id,
+            }),
+            action: 'connect',
+        })
+        .then(() => {
+            isConnectedToRPC.value = true;
+            gameToTest.is_running = true;
+            currentlyPlaying.value = gameToTest.id;
+            isConnecting.value = false;
+        })
+
         hideDialog();
     }
 }
@@ -451,8 +473,7 @@ provide<GameActionsProvider>(GameActionsKey, {
                     </div>
                     <button @click="handleTestRPC(selectedGame)"
                         class="w-full py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white">
-                        
-                        {{ isConnectedToRPC ? 'Disconnect to Discord Gateway' : 'Test RPC' }}
+                        {{ isConnecting || isConnectedToRPC ? 'Disconnect to Discord Gateway' : 'Test RPC' }}
                     </button>
 
                     <!-- <button :disabled="!canCreateDummyGame(selectedGame)" @click="createDummyGame(selectedGame)" class="w-full py-2 rounded-lg"
