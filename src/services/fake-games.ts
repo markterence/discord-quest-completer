@@ -1,5 +1,5 @@
 import { randomString } from '@/utils/random-string';
-import gameListData from '../assets/x.json';
+import gameListData from '../assets/gamelist.json';
 import type { Game } from '@/types/types';
 
 export const fakeGames = async () => {

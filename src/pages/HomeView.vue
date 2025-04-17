@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, useTemplateRef, shallowRef, provide } from 'vue';
-import gameListData from '../assets/x.json';
+import gameListData from '../assets/gamelist.json';
 import { onClickOutside, refDebounced, tryOnMounted } from '@vueuse/core';
 import { invoke } from '@tauri-apps/api/core';
 import { randomString } from '@/utils/random-string';
