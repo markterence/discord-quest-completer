@@ -100,9 +100,9 @@ jobs:
         with:
           name: tauri-win-release
           path: |
-            src-tauri/target/release
+            src-tauri/target/release/
         
-  release:
+  release-check:
     needs: build-tauri
     runs-on: ubuntu-latest
     steps:
