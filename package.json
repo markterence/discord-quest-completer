@@ -1,7 +1,7 @@
 {
   "name": "tauri-app",
   "private": true,
-  "version": "0.1.0",
+  "version": "2025.4.18",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,8 @@
     "tauri": "tauri",
     "build:runner:win": "cd ./src-win && cargo build --release && cd ..",
     "copy:runner:win": "cp ./src-win/target/release/src-win.exe ./src-tauri/resources/src-win.exe",
+    "copy:resources": "cp ./src-win/target/release/src-win.exe ./src-tauri/target/release/data/src-win.exe",
+    "sync:runner": "pnpm run build:runner:win && pnpm run copy:runner:win && pnpm copy:resources",
     "build:all": "tauri build && pnpm run build:template && pnpm run copy:template",
     "tauri:dev": "tauri dev && pnpm run copy:template"
   },

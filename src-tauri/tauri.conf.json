@@ -1,18 +1,18 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Discord Activity Handler",
-  "version": "0.1.0",
-  "identifier": "com.tauri-app.app",
+  "version": "2025.4.18",
+  "identifier": "me.markterence.discordquestcompleter",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build:runner:win && pnpm copy:runner:win && pnpm build",
+    "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
   },
   "app": {
     "windows": [
       {
-        "title": "Discord Activity Handler",
+        "title": "Discord Quest Completer",
         "width": 800,
         "height": 600
       }
