@@ -6,7 +6,11 @@ A lightweight desktop application that simulates Discord Rich Presence for games
 
 ## Installation
 
-> No instructions yet. Can't build from source yet. I will add this later and setup automation to release pre-built binaries.
+### Windows
+
+You can run follow the [development setup instructions](#Development Setup) to build the app from source.
+
+Alternatively, you can download manually pre-built pre-release binaries from the [Releases](https://github.com/markterence/discord-activity/releases) page.
 
 ## Features
 
@@ -76,32 +80,25 @@ Install dependencies for the Vue.js frontend using pnpm
 pnpm install
 ```
 
-Then run the Tauri dev command to start the development server. 
+Make sure to build and copy the dummy game binary from `src-win` and is added on tauri's resources folder.
+
+```bash
+pnpm build:runner:win && pnpm copy:runner:win
+```
+
+Then run the Tauri dev command to start the development server.
 
 ```bash
 pnpm tauri dev
 ```
 
-- Also make sure to copy the dummy game binary from `src-win` to the `src-tauri/target/release` and `src-tauri/target/debug` folder. This is where the Tauri app will look for the dummy game runner to run.
-- Get the list of detecatable games from the Discord API: `GET /api/applications/detectable` or `GET /api/:version/applications/detectable` and place the JSON file in `src/assets/gamelist.json`
-
-For the `src-win` the runner (dummy game):
-
-```bash
-cd src-win  
-# Make a release build
-cargo build --release
-# Debug build
-cargo build
-
-# Copy the dummy game runner to the tauri target folder, the Tauri app needs this executable to run the dummy game.
-cp target/release/src-win.exe ../src-tauri/target/release/template.exe
-cp target/debug/src-win.exe ../src-tauri/target/debug/template.exe
-```
+- Also, get the list of detecatable games from the Discord API: `GET /api/applications/detectable` or `GET /api/:version/applications/detectable` and place the JSON file in `src/assets/gamelist.json`
 
 ## Disclaimer
 
 This tool is intended for educational purposes and personal use. Please respect Discord's terms of service and game publishers' rights when using this application.
+
+The creators and maintainers of this project are not liable for any damages, account suspensions, or other consequences that may arise from using this software. Use at your own risk. This project is not affiliated with, endorsed by, or connected to Discord in any way.
 
 ## License
 
