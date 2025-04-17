@@ -1,12 +1,17 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use std::env;
+use std::fmt::format;
 use std::path::Path;
 use std::time::SystemTime;
 use std::sync::Mutex;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
+use tauri::{async_runtime::{block_on}, AppHandle, Emitter, Listener};
+use tokio::sync::oneshot::channel;
+
 
 mod rpc;
+mod runner;
 
 #[derive(Deserialize)]
 struct WatchingActivityParams {
@@ -138,7 +143,7 @@ async fn set_activity(activity_json: String, state: String) -> Result<(), String
     let client = rpc::make_client(app_id_i64, rpc::ds::Subscriptions::ACTIVITY).await;
 
     // Build the activity with optional fields from JSON
-    let mut rp = rpc::ds::activity::ActivityBuilder::default();
+    let mut rp: discord_sdk::activity::ActivityBuilder = rpc::ds::activity::ActivityBuilder::default();
 
     if let Some(activity_kind) = params.activity_kind {
         if activity_kind == 0 {
@@ -189,13 +194,178 @@ async fn set_activity(activity_json: String, state: String) -> Result<(), String
     Ok(())
 }
 
+/// Usage: Calling from JS:
+/// ```javascript
+/// await invoke('connect_to_discord_rpc_3', json, 'connect' | 'disconnect'); 
+#[tauri::command(rename_all = "snake_case")] 
+fn connect_to_discord_rpc_3(handle: AppHandle, activity_json: String, action: String) {
+    let app = handle.clone();
+
+    let event_connecting = "client_connecting";
+    let event_connected = "client_connected";
+    let event_disconnect = "event_disconnect";
+    let event_connect = "event_connect";
+
+    let activity = runner::parse_activity_json(&activity_json).unwrap();
+
+    let connecting_payload = serde_json::json!({
+        "app_id": activity.app_id,
+    });
+    
+    let client_option = {
+        let mut client_guard = get_discord_client().lock().unwrap();
+        // Take the client out, leaving None in its place
+        client_guard.take()
+        // MutexGuard is dropped here at the end of scope
+    };
+
+    // if let Some(client) = client_option {
+    //     client.discord.disconnect().await;
+    //     println!("Disconnected since we have an existing client"); 
+    // }
+ 
+ 
+    let task = tauri::async_runtime::spawn(async move {
+        handle.emit(event_connecting, connecting_payload).unwrap_or_else(|e| {
+            eprintln!("Failed to emit event: {}", e)
+        });
+
+        let client = runner::set_activity(activity_json).await.map_err(|e| {
+            println!("Failed to set activity: {}", e);
+        }).unwrap(); 
+        
+        let connected_payload = serde_json::json!({
+            "app_id": activity.app_id, 
+        });
+        
+        {
+            let mut client_guard = get_discord_client().lock().unwrap();
+            *client_guard = Some(client);
+        }
+
+        handle.emit(event_connected, connected_payload).unwrap_or_else(|e| {
+            eprintln!("Failed to emit event: {}", e);
+        });
+
+        handle.listen(event_disconnect, move |_| {
+            println!("Disconnecting from Discord RPC inner");
+            let disconnect_task = tauri::async_runtime::spawn(async move {
+                let client_option = {
+                    let mut client_guard = get_discord_client().lock().unwrap();
+                    // Take the client out, leaving None in its place
+                    client_guard.take()
+                    // MutexGuard is dropped here at the end of scope
+                };
+                if let Some(client) = client_option {
+                    client.discord.disconnect().await;
+                    println!("Disconnected from Discord RPC inner");
+                }
+                let _ = tx.send(());
+            });
+            // disconnect_task.abort();
+        });
+    });
+
+    app.listen(event_disconnect, move |_| {
+        println!("Disconnecting from Discord RPC...");
+        task.abort();
+    });
+
+}
+
 #[tauri::command(rename_all = "snake_case")]
-async fn connect_to_discord_rpc(app_id: String, discord_state: String) -> Result<(), String> {
+async fn connect_to_discord_rpc_2(app_id: String, discord_state: String) -> Result<String, String> {
     println!("state is: {}", discord_state);
     // convert string to i64
     let app_id_i64: i64 = app_id.parse().map_err(|e| {
         format!("Failed to parse app ID: {}", e)
     })?;
+
+    // Handle disconnect request
+    if discord_state == "disconnect" {
+        let client_option = {
+            let mut client_guard = get_discord_client().lock().unwrap();
+            // Take the client out, leaving None in its place
+            client_guard.take()
+        };
+        
+        if let Some(client) = client_option {
+            client.discord.disconnect().await;
+            println!("Disconnected from Discord RPC");
+            return Ok("Disconnected from Discord RPC".to_string());
+        } else {
+            println!("No Discord client to disconnect"); 
+            return Ok("No Discord client to disconnect".to_string());
+        }
+    }
+     
+    // Handle connect request
+    if discord_state == "connect" {
+        // First check if we already have an active client and disconnect it
+        let has_existing_client = {
+            let client_guard = get_discord_client().lock().unwrap();
+            client_guard.is_some()
+        };
+        
+        // If we have an existing client, disconnect it first
+        if has_existing_client {
+            let client_option = {
+                let mut client_guard = get_discord_client().lock().unwrap();
+                client_guard.take()
+            };
+            
+            if let Some(client) = client_option {
+                println!("Disconnecting existing Discord RPC client before connecting with new app ID");
+                client.discord.disconnect().await;
+            }
+        }
+        
+        // Create a new client with the new app ID
+        println!("Connecting to Discord RPC with app ID: {}", app_id);
+        let client = rpc::make_client(app_id_i64, rpc::ds::Subscriptions::ACTIVITY).await;
+        
+        // Set initial activity
+        let rp = rpc::ds::activity::ActivityBuilder::default()
+            .kind(rpc::ds::activity::ActivityKind::Playing)
+            .start_timestamp(SystemTime::now());
+        
+        client.discord.update_activity(rp).await.map_err(|e| {
+            format!("Failed to update activity: {}", e)
+        })?;
+    
+        // Store the new client
+        {
+            let mut client_guard = get_discord_client().lock().unwrap();
+            *client_guard = Some(client);
+        }
+        
+        return Ok(format!("Connected to Discord RPC with app ID: {}", app_id));
+    }
+
+    Err("Invalid discord_state parameter. Must be 'connect' or 'disconnect'".to_string())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+async fn connect_to_discord_rpc(app_id: String, discord_state: String) -> Result<String, String> {
+    println!("state is: {}", discord_state);
+    // convert string to i64
+    let app_id_i64: i64 = app_id.parse().map_err(|e| {
+        format!("Failed to parse app ID: {}", e)
+    })?;
+
+    let client_option = {
+        let mut client_guard = get_discord_client().lock().unwrap();
+        // Take the client out, leaving None in its place
+        client_guard.take()
+        // MutexGuard is dropped here at the end of scope
+    };
+    
+    // Now use the client without holding the MutexGuard
+    if let Some(client) = client_option {
+        client.discord.clear_activity().await;
+        println!("Disconnected from Discord RPC");
+        return Ok(format!("Disconnected from Discord RPC"));
+    }
      
     if discord_state == "connect" {
         let client = rpc::make_client(app_id_i64, rpc::ds::Subscriptions::ACTIVITY).await;
@@ -230,12 +400,15 @@ async fn connect_to_discord_rpc(app_id: String, discord_state: String) -> Result
         // Now use the client without holding the MutexGuard
         if let Some(client) = client_option {
             client.discord.disconnect().await;
+            println!("Disconnected from Discord RPC");
+            return Ok(format!("Disconnected from Discord RPC"));
         } else {
-            println!("No Discord client to disconnect");
+            println!("No Discord client to disconnect"); 
+            return Ok(format!("No Discord client to disconnect"));
         }
     }
 
-    Ok(())
+    Ok(format!("Connected to Discord RPC with app ID: {}", app_id))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -248,6 +421,8 @@ pub fn run() {
             connect_to_discord_rpc,
             set_activity,
             stop_process,
+            connect_to_discord_rpc_2,
+            connect_to_discord_rpc_3,
             run_background_process])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
