@@ -50,7 +50,7 @@ folder-name/
 
 ## How It Works
 
-This app creates small executable files that mimic the actual game processes that Discord looks for when detecting a verified game to use it for it's Rich Presence activity. When launched/played, the tiny executables trigger Discord's Rich Presence detection while consuming minimal system resources.
+This app creates small executable files that mimic the actual game processes that Discord looks for when detecting a verified game to use it for it's Rich Presence activity. When launched/played, the tiny executables trigger Discord's Rich Presence detection.
 
 There is also an experimental discord RPC functionality, it connects to Discord's RPC Gateway to send Activity updates for the selected game using its App ID even if the game is not running. Though this is functional, this may not be the intended use of Discord's RPC and may violate their terms of service (may be under _self-botting_) and can put your Discord account at risk. Use this feature at your own risk.
 
