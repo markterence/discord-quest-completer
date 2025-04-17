@@ -11,7 +11,7 @@ fn main() {
     // // Create the tray icon first
     let _tray = create_tray_icon();
     let mut window = Window::new(
-            "Discord Activity (runner)",
+            "Discord Rich Presence Simulator (runner)",
             WIDTH,
             HEIGHT,
             WindowOptions {

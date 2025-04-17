@@ -18,7 +18,7 @@ pub fn create_tray_icon() -> TrayIcon {
     ).expect("Failed to create icon");
 
     TrayIconBuilder::new()
-        .with_tooltip("Runner")
+        .with_tooltip("Discord Rich Presence Simulator")
         .with_icon(icon)
         .build()
         .expect("Failed to create tray icon")
