@@ -69,7 +69,6 @@ async fn run_background_process(path: &str, executable_name: &str, path_len: i64
     let executable_path = game_folder_path.join(executable_name);
     match std::process::Command::new(&executable_path)
         .current_dir(game_folder_path) // Set working directory to the game folder
-        .arg("--foreground") // Optional: pass a foreground flag if your app supports it
         .spawn()
     {
         Ok(_) => Ok("Process started successfully".to_string()),
