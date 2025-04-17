@@ -6,7 +6,7 @@ use std::time::SystemTime;
 use std::sync::Mutex;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
-use tauri::{async_runtime::{block_on}, AppHandle, Emitter, Listener};
+use tauri::{path::BaseDirectory, AppHandle, Emitter, Listener, Manager};
 use tokio::sync::oneshot::channel;
 
 
@@ -39,10 +39,10 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command(rename_all = "snake_case")]
-async fn create_fake_game(path: &str, executable_name: &str, path_len: i64, app_id: i64) -> Result<String, String> {
+async fn create_fake_game(handle: tauri::AppHandle, path: &str, executable_name: &str, path_len: i64, app_id: i64) -> Result<String, String> {
     // Must create in the same directory as the executable to avoid permission issues
     // Get the executable directory to look for config file
-    let exe_path = env::current_exe().unwrap_or_default();
+    let exe_path: std::path::PathBuf = env::current_exe().unwrap_or_default();
     let exe_dir = exe_path.parent().unwrap_or_else(|| Path::new(""));
 
     let normalized_path = Path::new(path).to_string_lossy().to_string();
@@ -61,9 +61,13 @@ async fn create_fake_game(path: &str, executable_name: &str, path_len: i64, app_
     };
     // copy the dummy executable to the created folder
     // there is a `template.exe` file along the final build. 
+    let resource_path = handle.path().resolve("data/src-win.exe", BaseDirectory::Resource)
+    .unwrap_or_default();
+ 
+    println!("Creating dummy game executable: {:?}", resource_path);
     let dummy_executable_path = exe_dir.join("template.exe");
     let target_executable_path = game_folder_path.join(executable_name);
-    match std::fs::copy(&dummy_executable_path, &target_executable_path) {
+    match std::fs::copy(&resource_path, &target_executable_path) {
         Ok(_) => {
             Ok(format!("Dummy executable copied to: {:?}", target_executable_path))
         },
