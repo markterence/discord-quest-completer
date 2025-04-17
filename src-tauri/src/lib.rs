@@ -67,6 +67,8 @@ async fn run_background_process(path: &str, executable_name: &str, path_len: i64
 
     let game_folder_path = exe_dir.join("games").join(app_id.to_string()).join(normalized_path);
     let executable_path = game_folder_path.join(executable_name);
+    // const DETACHED_PROCESS: u32 = 0x00000008;
+    // const CREATE_NO_WINDOW: u32 = 0x08000000; // Hide the window
     match std::process::Command::new(&executable_path)
         .current_dir(game_folder_path) // Set working directory to the game folder
         .spawn()
