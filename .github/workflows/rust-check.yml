@@ -56,7 +56,7 @@ jobs:
         shell: bash
         run: | 
           cd src-win
-          cargo build --release --verbose --target=${{ matrix.x-target }}
+          cargo build --release --verbose
           cd ..
           cp ./src-win/target/${{ matrix.x-target }}/release/src-win.exe ./src-tauri/resources/src-win.exe
 
