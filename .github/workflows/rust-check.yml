@@ -91,7 +91,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tauriScript: pnpm
           args: ${{ matrix.args }}
 
       - name: Create artifact for release
