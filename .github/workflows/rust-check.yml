@@ -58,7 +58,7 @@ jobs:
           cd src-win
           cargo build --release --verbose
           cd ..
-          cp ./src-win/target/${{ matrix.x-target }}/release/src-win.exe ./src-tauri/resources/src-win.exe
+          cp ./src-win/target/release/src-win.exe ./src-tauri/resources/src-win.exe
 
       - name: install frontend dependencies
         run: pnpm install
