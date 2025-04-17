@@ -12,6 +12,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';    
 import { invoke } from '@tauri-apps/api/core';
+import { emit } from '@tauri-apps/api/event';
 
 const ActivityKind = {
     Playing: 0,
@@ -28,29 +29,21 @@ function discordTest() {
  
     if(isConnected.value) {
         console.log('Disconnecting from Discord');
-        invoke('set_activity', {
-            activity_json:  JSON.stringify({
-                app_id: appIdCode,
-                details: 'Disconnecting from Discord'
-            }),
-            state: 'disconnect'
-        })
+        emit('event_disconnect');
         isConnected.value = false;
         return;
     }
     
-
-    invoke('set_activity', {
+    invoke('connect_to_discord_rpc_3', {
         activity_json:  JSON.stringify({
             app_id: appIdCode,
-            details: 'Watching Japanese media',
+            details: 'xmonad -> dwm -> spectrwm -> i3 -> bspwm -> qtile -> hyrpland -> xfce -> gnome -> sway',
             state: "state", 
-            activity_kind: ActivityKind.Listening,
+            activity_kind: ActivityKind.Watching,
             timestamp: createAgoTimestamp('1h 30m')
         }),
-        state: 'connect'
-    })
-    
+        action: 'connect',
+    });
     isConnected.value = true;
 }
 
