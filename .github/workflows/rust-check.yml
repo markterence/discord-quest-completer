@@ -101,6 +101,7 @@ jobs:
           name: tauri-win-release
           path: |
             src-tauri/target/release/
+            src-tauri\target\release\
         
   release-check:
     needs: build-tauri
