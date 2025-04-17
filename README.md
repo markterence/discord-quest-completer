@@ -4,7 +4,6 @@
 
 A desktop application that simulates Discord Rich Presence for games without requiring installation of the actual games. Perfect for completing Discord Quests and showing off your gaming status (discord kids gonna love it) without the storage burden.
 
-
 <!--
 Old attachments: Kept here since github dont provide way to remove/manage attached files.
 
@@ -12,11 +11,7 @@ https://github.com/user-attachments/assets/34ff80c4-9e76-452c-9b02-e56f9ea706dd
 https://github.com/user-attachments/assets/de904123-07df-41a9-8db1-ff05cc7ccc9b
 -->
 
-
-
 https://github.com/user-attachments/assets/de904123-07df-41a9-8db1-ff05cc7ccc9b
-
-
 
 ## Installation
 
@@ -28,6 +23,21 @@ https://github.com/user-attachments/assets/de904123-07df-41a9-8db1-ff05cc7ccc9b
 You can run follow the [development setup instructions](#Development Setup) to build the app from source.
 
 Alternatively, you can download manually pre-built pre-release binaries from the [Releases](https://github.com/markterence/discord-activity/releases) page.
+
+## Uninstall
+
+To uninstall the app, simply go to the folder where you extracted the app and delete the contents folder.
+
+The content of the folder may look like this:
+
+```text
+folder-name/
+├── discord-quest-completer.exe (main app)
+├── data/ 
+│   ├── src-win.exe (runner dummy template)
+├── games/
+│    ├── <game-id>/
+```
 
 ## Features
 
