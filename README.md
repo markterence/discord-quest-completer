@@ -2,11 +2,14 @@
 
 > Discord Quest Completer, Discord Rich Presence Simulator whatever. I don't know what to call this.
 
-A lightweight desktop application that simulates Discord Rich Presence for games without requiring installation of the actual games. Perfect for completing Discord Quests and showing off your gaming status (discord kids gonna love it) without the storage burden.
+A desktop application that simulates Discord Rich Presence for games without requiring installation of the actual games. Perfect for completing Discord Quests and showing off your gaming status (discord kids gonna love it) without the storage burden.
 
 ## Installation
 
 ### Windows
+
+> Webview2 is required to run the app. WebView2 comes preinstalled on Windows 11. On versions older than Windows 11 you may need to install it manually.
+> If you don't have it installed, you can download it from [here](https://developer.microsoft.com/en-us/microsoft-edge/webview2).
 
 You can run follow the [development setup instructions](#Development Setup) to build the app from source.
 
