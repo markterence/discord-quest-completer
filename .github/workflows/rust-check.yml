@@ -25,16 +25,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: 10
+          run_install: false
+
       - name: setup node
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
+          cache: 'pnpm'
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
       
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-registry-
+
+      - name: Cache Cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-index-
+          
       - name: Get Game List
         shell: bash
         env:
@@ -59,6 +80,10 @@ jobs:
           cargo build --release --verbose
           cd ..
           cp ./src-win/target/release/src-win.exe ./src-tauri/resources/src-win.exe
+
+      - name: Enable pnpm on Windows
+        if: matrix.platform == 'windows-latest'
+        run: |
 
       - name: install frontend dependencies
         run: pnpm install
