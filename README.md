@@ -64,9 +64,9 @@ There is also an experimental discord RPC functionality, it connects to Discord'
 ## Planned Features and fixes
 
 - Make the "Stop" button work again if process was terminated outside of app's control.
-- Save added games to a list for easy access
-- Uninstall / Clean the installed dummy game runners.
-- Discord Activity Simulator/playground (Customize and preview rich presence for developers and custom activities)
+- Persist games that added on the list so it wont reset.
+- Uninstall / Clean the installed dummy game runners. (Since it creates copies of a small executable file around <200KB per game, it may grow in size in the long run)
+- Discord Activity Simulator/playground (Customizable rich presence for developers and custom activities)
 - Set custom activity status from supported games
 - Linux and MacOS support (if possible)
 
