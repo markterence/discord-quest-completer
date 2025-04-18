@@ -98,8 +98,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tauri-win-release
+          # Bro exported the whole giga release folder of tauri
+          # pick only the files we need for the release like the binary and the data folder
+          # resource folders and installers.
           path: |
-            src-tauri/target/release/
+            src-tauri/target/release/discord-quest-completer.exe
+            src-tauri/target/release/bundle/
+            src-tauri/target/release/data/
+            src-tauri/target/release/resources/
         
   release-check:
     needs: build-tauri
@@ -124,9 +130,9 @@ jobs:
           win_build_release_dir: discord-quest-completer-win32-x64-${{ env.version }}
         run: |
           mkdir -p ./build/${{ env.win_build_release_dir }}
-          cp tauri-win-release/release/discord-quest-completer.exe ./build/${{ env.win_build_release_dir }}/
-          cp -r tauri-win-release/release/data/ ./build/${{ env.win_build_release_dir }}/
-          cp -r tauri-win-release/release/resources/ ./build/${{ env.win_build_release_dir }}/
+          cp tauri-win-release/discord-quest-completer.exe ./build/${{ env.win_build_release_dir }}/
+          cp -r tauri-win-release/data/ ./build/${{ env.win_build_release_dir }}/
+          cp -r tauri-win-release/resources/ ./build/${{ env.win_build_release_dir }}/
           zip -r ./build/${{ env.win_build_release_dir }}.zip ./build/${{ env.win_build_release_dir }}
           echo "win_build_release_dir=${{ env.win_build_release_dir }}" >> $GITHUB_ENV
 
