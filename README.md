@@ -1,7 +1,7 @@
 # Discord Game Activity / Discord Rich Presence
 
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/markterence/discord-activity/rust-check.yml?branch=main&style=flat&label=build%20artifacts)
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/markterence/discord-activity/build-release.yml?branch=main&style=flat&label=build%20(release))
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/markterence/discord-quest-completer/rust-check.yml?branch=main&style=flat&label=build%20artifacts)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/markterence/discord-quest-completer/build-release.yaml?branch=main&style=flat&label=build%20(release))
 
 > Discord Quest Completer, Discord Rich Presence Simulator whatever. I don't know what to call this.
 
@@ -20,17 +20,21 @@ https://github.com/user-attachments/assets/de904123-07df-41a9-8db1-ff05cc7ccc9b
 
 ### Windows
 
+> [!IMPORTANT]
+> Make sure you place or extract in a location where you have write or execute permissions.
+> 
+> The reason for this is that the app will create dummy game file in the same directory.
+> By default, the app will not need to be run as administrator, unless if it was installed in a directory that requires elevated permissions. (e.g. `C:\Program Files\`, root of `C:\`, etc.)
+
+
+> [!NOTE]
 > Webview2 is required to run the app. WebView2 comes preinstalled on Windows 11. On versions older than Windows 11 you may need to install it manually.
 > If you don't have it installed, you can download it from [here](https://developer.microsoft.com/en-us/microsoft-edge/webview2).
 
-You can run follow the [development setup instructions](#Development-Setup) to build the app from source.
 
-Alternatively, you can download manually pre-built pre-release binaries from the [Releases](https://github.com/markterence/discord-activity/releases) page.
+You can download manually pre-built pre-release binaries from the [Releases](https://github.com/markterence/discord-activity/releases) page.
 
-- [discord-quest-completer-v.0.1.0-pre-release](https://github.com/markterence/discord-activity/commits/v0.1.0-pre-release)
-
-> Make sure you place or extract in a location where you have write or execute permissions. The reason for this is that the app will create dummy game file in the same directory.
-> By default, the app will not need to be run as administrator, unless if it was installed in a directory that requires elevated permissions. (e.g. `C:\Program Files\`, root of `C:\`, etc.)
+Alternatively, you can follow the [development setup instructions](#development-setup) to build the app from source.
 
 ## Uninstall
 
