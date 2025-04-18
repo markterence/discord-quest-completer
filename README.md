@@ -16,7 +16,9 @@ https://github.com/user-attachments/assets/de904123-07df-41a9-8db1-ff05cc7ccc9b
 
 https://github.com/user-attachments/assets/de904123-07df-41a9-8db1-ff05cc7ccc9b
 
-## Installation
+---
+
+## 📥 Installation
 
 ### Windows
 
@@ -36,7 +38,7 @@ You can download manually pre-built pre-release binaries from the [Releases](htt
 
 Alternatively, you can follow the [development setup instructions](#development-setup) to build the app from source.
 
-## Uninstall
+## 🗑️ Uninstall
 
 To uninstall the app, simply go to the folder where you extracted the app and delete the contents folder.
 
@@ -51,27 +53,29 @@ folder-name/
 │    ├── <game-id>/
 ```
 
-## Features
+---
+
+## ✨ Features
 
 - Simulate playing verified Discord games without installation
 - Complete Discord Quests requiring 15-minute gameplay (not yet tested for Stream the game Quests)
 - Accessible for users without high-end gaming PCs
 - Only Discord Verified games are supported
 
-## How It Works
+## ⚙️ How It Works
 
 This app creates small executable files that mimic the actual game processes that Discord looks for when detecting a verified game to use it for it's Rich Presence activity. When launched/played, the tiny executables trigger Discord's Rich Presence detection.
 
 There is also an experimental discord RPC functionality, it connects to Discord's RPC Gateway to send Activity updates for the selected game using its App ID even if the game is not running. Though this is functional, this may not be the intended use of Discord's RPC and may violate their terms of service (may be under _self-botting_) and can put your Discord account at risk. Use this feature at your own risk.
 
-## Use Cases
+## 🛠️ Use Cases
 
 - Complete Discord Quests without downloading massive game files
 - Show off playing the latest games to friends
 - Save disk space while still participating in Discord's gaming ecosystem
 - Useful for users with limited internet bandwidth or storage space
 
-## Planned Features and fixes
+## 🚀 Planned Features and fixes
 
 - Make the "Stop" button work again if process was terminated outside of app's control.
 - Persist games that added on the list so it wont reset.
@@ -80,12 +84,13 @@ There is also an experimental discord RPC functionality, it connects to Discord'
 - Set custom activity status from supported games
 - Linux and MacOS support (if possible)
 
+---
 
-## Supported Platforms
+## 🖥️ Supported Platforms
 
 - Windows 11 (not yet tested on Windows 10 but it should work)
 
-## Linux and MacOS support ?
+## 🐧 Linux and 🍎 MacOS Support?
 
 Currently only Windows is supported. But I will try to add Linux support. I don't have a MacOS machine to test on so MacOS support is not gonna happen.
 
@@ -93,25 +98,27 @@ The reason for not having Linux and MacOS support right is that I want to make s
 
 For Linux, I don't know where to start yet. I will try to explore more of what to use and make sure the runner binary is small and it's a pain (Wine, Proton, etc. How does discord detection work in linux. LMAO same for MacOS)
 
-## TechStack
+## 🛠️ Tech Stack
 
-- Tauri
-- Rust
-- Vue.js
+- 🦀 Rust
+- 🌐 Vue.js
+- 🧰 Tauri
 
-## Development Setup
+---
 
-### Recommended IDE Setup
+## 🧑‍💻 Development Setup
+
+### 🖥️ Recommended IDE Setup
 
 - [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
 
-### Requirements
+### 📋 Requirements
 
 - Tauri - make sure the [pre-requisites](https://tauri.app/v1/guides/getting-started/prerequisites/) are installed such as Rust.
 - NodeJS - use any that is latest or node 20+
 - pnpm - project uses pnpm as package manager for the frontend.
 
-### Development
+### 🛠️ Development
 
 Install dependencies for the Vue.js frontend using pnpm
 
@@ -133,12 +140,16 @@ pnpm tauri dev
 
 - Also, get the list of detecatable games from the Discord API: `GET /api/applications/detectable` or `GET /api/:version/applications/detectable` and place the JSON file in `src/assets/gamelist.json`
 
-## Disclaimer
+---
+
+## ⚠️ Disclaimer
 
 This tool is intended for educational purposes and personal use. Please respect Discord's terms of service and game publishers' rights when using this application.
 
 The creators and maintainers of this project are not liable for any damages, account suspensions, or other consequences that may arise from using this software. Use at your own risk. This project is not affiliated with, endorsed by, or connected to Discord in any way.
 
-## License
+---
+
+## 📜 License
 
 [MIT License](LICENSE)© Mark Terence Tiglao - 2025
