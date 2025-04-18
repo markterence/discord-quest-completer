@@ -130,10 +130,9 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          path: tauri-win
           # artifcats: tauri-win-release, tauri-win-debug
           pattern: tauri-win-*
-          merge-multiple: true
+          merge-multiple: false
 
       - name: prepare files
         env:
