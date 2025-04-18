@@ -148,14 +148,12 @@ jobs:
           cp tauri-win-release/discord-quest-completer.exe ./build/${{ env.win_build_release_dir }}/
           cp -r tauri-win-release/data/ ./build/${{ env.win_build_release_dir }}/
           cp -r tauri-win-release/resources/ ./build/${{ env.win_build_release_dir }}/
-          cp -r tauri-win-release/bundle/ ./build/${{ env.win_build_release_dir }}/
           zip -r ./build/${{ env.win_build_release_dir }}.zip ./build/${{ env.win_build_release_dir }}
           
           mkdir -p ./build/${{ env.win_build_debug_dir }}
           cp tauri-win-debug/discord-quest-completer.exe ./build/${{ env.win_build_debug_dir }}/
           cp -r tauri-win-debug/data/ ./build/${{ env.win_build_debug_dir }}/
           cp -r tauri-win-debug/resources/ ./build/${{ env.win_build_debug_dir }}/
-          cp -r tauri-win-debug/bundle/ ./build/${{ env.win_build_debug_dir }}/
           zip -r ./build/${{ env.win_build_debug_dir }}.zip ./build/${{ env.win_build_debug_dir }}
 
           echo "win_build_release_dir=${{ env.win_build_release_dir }}" >> $GITHUB_ENV
@@ -171,3 +169,5 @@ jobs:
           path: |
             ./build/${{ env.win_build_release_dir }}.zip
             ./build/${{ env.win_build_debug_dir }}.zip
+            ./tauri-win-debug/bundle/**/*
+            ./tauri-win-release/bundle/**/*

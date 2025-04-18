@@ -132,7 +132,6 @@ jobs:
           cp tauri-win-release/discord-quest-completer.exe ./build/${{ env.win_build_release_dir }}/
           cp -r tauri-win-release/data/ ./build/${{ env.win_build_release_dir }}/
           cp -r tauri-win-release/resources/ ./build/${{ env.win_build_release_dir }}/
-          cp -r tauri-win-release/bundle/ ./build/${{ env.win_build_release_dir }}/
           zip -r ./build/${{ env.win_build_release_dir }}.zip ./build/${{ env.win_build_release_dir }}
           echo "win_build_release_dir=${{ env.win_build_release_dir }}" >> $GITHUB_ENV
 
@@ -142,7 +141,9 @@ jobs:
           win_build_release_dir: ${{ env.win_build_release_dir }}
         with:
           name: ${{ env.win_build_release_dir }}.zip
-          path: ./build/${{ env.win_build_release_dir }}.zip
+          path: | 
+            ./build/${{ env.win_build_release_dir }}.zip
+            tauri-win-release/bundle/**/*
 
       - name: Create and Upload Release
         id: create_release
