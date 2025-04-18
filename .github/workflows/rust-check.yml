@@ -182,7 +182,7 @@ jobs:
         env: 
           version: ${{ env.version }}
         with:
-          name: bundle-release-${{ env.version }}.zip
+          name: bundle-debug-${{ env.version }}.zip
           path: |
             ./tauri-win-debug/bundle/**/*
 
