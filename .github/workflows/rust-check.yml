@@ -142,6 +142,7 @@ jobs:
           win_build_release_dir: ${{ env.win_build_release_dir }}
         with:
           name: ${{ env.win_build_release_dir }}.zip
+          path: ./build/${{ env.win_build_release_dir }}.zip
 
       # - name: Create and Upload Release
       #   id: create_release
