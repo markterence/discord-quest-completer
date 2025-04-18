@@ -26,17 +26,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+      
       - name: setup node
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
+          cache: 'pnpm'
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-registry-
       
+      - name: Cache Cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-index-
+
       - name: Get Game List
+        shell: bash
         env:
           GAME_LIST_URL: ${{ secrets.GAME_LIST_URL }}
         run: |
@@ -53,11 +74,12 @@ jobs:
       # Build src-win
       - name: Build src-win project x86_64 binary
         if: matrix.platform == 'windows-latest'
+        shell: bash
         run: | 
           cd src-win
-          cargo build --release --verbose --target=${{ matrix.x-target }}
+          cargo build --release --verbose
           cd ..
-          cp ./src-win/target/${{ matrix.x-target }}/release/src-win.exe ./src-tauri/resources/src-win.exe
+          cp ./src-win/target/release/src-win.exe ./src-tauri/resources/src-win.exe
 
       - name: Rust cache (Tauri App)
         uses: swatinem/rust-cache@v2
@@ -71,9 +93,23 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tauriScript: pnpm
           args: ${{ matrix.args }}
       
+      - name: Create artifact for release
+        id: create_artifact_for_release
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-win-release
+          path: |
+            src-tauri/target/release/discord-quest-completer.exe
+            src-tauri/target/release/bundle/
+            src-tauri/target/release/data/
+            src-tauri/target/release/resources/
+
+  release:
+    needs: build-tauri
+    runs-on: ubuntu-latest
+    steps:
       - name: get version
         id: extract_version
         run: |
@@ -81,19 +117,32 @@ jobs:
           echo "version=$version" >> $GITHUB_ENV
         shell: bash
 
-      - name: prepare files 
-        # create a folder and zip the files
-        # folder-name='discord-quest-completer-${{ env.version }}'
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-win-release
+          path: tauri-win-release
+
+      - name: prepare files
         env:
-          build_release_dir: discord-quest-completer-${{ matrix.x-target }}
+          version: ${{ env.version }}
+          win_build_release_dir: discord-quest-completer-win32-x64-${{ env.version }}
         run: |
-          mkdir -p ./build/${{ env.build_release_dir }}
-          cp ./src-tauri/target/release/discord-quest-completer.exe ./build/${{ env.build_release_dir }}/
-          cp -r ./src-tauri/target/data/ ./build/${{ env.build_release_dir }}/
-          cp -r ./src-tauri/target/resources/ ./build/${{ env.build_release_dir }}/
-          zip -r ./build/${{ env.build_release_dir }}.zip ./build/${{ env.build_release_dir }}
-          cd ../../..
-          echo "build_release_dir=${{ env.build_release_dir }}" >> $GITHUB_ENV
+          mkdir -p ./build/${{ env.win_build_release_dir }}
+          cp tauri-win-release/discord-quest-completer.exe ./build/${{ env.win_build_release_dir }}/
+          cp -r tauri-win-release/data/ ./build/${{ env.win_build_release_dir }}/
+          cp -r tauri-win-release/resources/ ./build/${{ env.win_build_release_dir }}/
+          cp -r tauri-win-release/bundle/ ./build/${{ env.win_build_release_dir }}/
+          zip -r ./build/${{ env.win_build_release_dir }}.zip ./build/${{ env.win_build_release_dir }}
+          echo "win_build_release_dir=${{ env.win_build_release_dir }}" >> $GITHUB_ENV
+
+      - name: Create Build Artifacts
+        uses: actions/upload-artifact@v4
+        env: 
+          win_build_release_dir: ${{ env.win_build_release_dir }}
+        with:
+          name: ${{ env.win_build_release_dir }}.zip
+          path: ./build/${{ env.win_build_release_dir }}.zip
 
       - name: Create and Upload Release
         id: create_release
