@@ -159,15 +159,38 @@ jobs:
           echo "win_build_release_dir=${{ env.win_build_release_dir }}" >> $GITHUB_ENV
           echo "win_build_debug_dir=${{ env.win_build_debug_dir }}" >> $GITHUB_ENV
 
-      - name: Create Build Artifacts
+      - name: Upload Debug Artifacts
         uses: actions/upload-artifact@v4
         env: 
           win_build_debug_dir: ${{ env.win_build_debug_dir }}
+        with:
+          name: ${{ env.win_build_debug_dir }}.zip
+          path: |
+            ./build/${{ env.win_build_release_dir }}.zip
+            
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v4
+        env: 
           win_build_release_dir: ${{ env.win_build_release_dir }}
         with:
           name: ${{ env.win_build_release_dir }}.zip
           path: |
             ./build/${{ env.win_build_release_dir }}.zip
-            ./build/${{ env.win_build_debug_dir }}.zip
+
+      - name: Upload Debug Bundles (Artifacts)
+        uses: actions/upload-artifact@v4
+        env: 
+          version: ${{ env.version }}
+        with:
+          name: bundle-release-${{ env.version }}.zip
+          path: |
             ./tauri-win-debug/bundle/**/*
-            ./tauri-win-release/bundle/**/*
+
+      - name: Upload Release Bundles (Artifacts)
+        uses: actions/upload-artifact@v4
+        env: 
+          version: ${{ env.version }}
+        with:
+          name: bundle-release-${{ env.version }}.zip
+          path: |
+            ./tauri-win-release/bundle/**/*            
