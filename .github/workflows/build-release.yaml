@@ -153,6 +153,11 @@ jobs:
           name: Pre-Release ${{ env.version }}
           body: |
             ![GitHub Downloads (specific asset, specific tag)](https://img.shields.io/github/downloads/markterence/discord-activity/${{ env.version }}/${{ env.win_build_release_dir }}.zip)
+            
+            #### Disclaimer
+            This tool is intended for educational purposes and personal use. Please respect Discord's terms of service and game publishers' rights when using this application.  
+            
+            The creators and maintainers of this project are not liable for any damages, account suspensions, or other consequences that may arise from using this software. Use at your own risk. This project is not affiliated with, endorsed by, or connected to Discord in any way.
           append_body: true
           generate_release_notes: true
           files: |
