@@ -80,6 +80,10 @@ jobs:
           cd ..
           cp ./src-win/target/release/src-win.exe ./src-tauri/resources/src-win.exe
 
+      - name: Rust cache (Tauri App)
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
 
       - name: install frontend dependencies
         run: pnpm install
