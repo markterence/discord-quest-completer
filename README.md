@@ -1,5 +1,8 @@
 # Discord Game Activity / Discord Rich Presence
 
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/markterence/discord-activity/rust-check.yml?branch=main&style=flat&label=build%20artifacts)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/markterence/discord-activity/build-release.yml?branch=main&style=flat&label=build%20(release))
+
 > Discord Quest Completer, Discord Rich Presence Simulator whatever. I don't know what to call this.
 
 A desktop application that simulates Discord Rich Presence for games without requiring installation of the actual games. Perfect for completing Discord Quests and showing off your gaming status (discord kids gonna love it) without the storage burden.
