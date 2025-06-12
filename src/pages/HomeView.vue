@@ -5,7 +5,6 @@ import { onClickOutside, refDebounced, tryOnMounted } from '@vueuse/core';
 import { invoke } from '@tauri-apps/api/core';
 import { randomString } from '@/utils/random-string';
 import { GameActionsProvider, GameExecutable, type Game } from '@/types/types';
-import { fakeGames } from '@/services/fake-games';
 import IconVerified from '@/components/IconVerified.vue';
 import { isEmpty } from 'lodash-es';
 import GameExecutables from '@/components/GameExecutables.vue';
@@ -295,7 +294,7 @@ function hideDialog() {
 
 tryOnMounted(async () => {
     // Initialize game list with fake data
-    gameList.value = await fakeGames();
+    // gameList.value = await fakeGames();
 });
 
 provide<GameActionsProvider>(GameActionsKey, {
