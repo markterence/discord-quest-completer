@@ -14,6 +14,9 @@ dependencies:
   '@tauri-apps/plugin-opener':
     specifier: ^2
     version: 2.2.5
+  '@tauri-apps/plugin-sql':
+    specifier: ~2
+    version: 2.2.1
   '@vueuse/core':
     specifier: ^13.1.0
     version: 13.1.0(vue@3.5.13)
@@ -659,6 +662,12 @@ packages:
 
   /@tauri-apps/plugin-opener@2.2.5:
     resolution: {integrity: sha512-hHsJ9RPWpZvZEPVFaL+d25gABMUMOf/A6ESXnvf/ii9guTukj58WXsAE/SOysXRIhej7kseRCxnOnIMpSCdUsQ==}
+    dependencies:
+      '@tauri-apps/api': 2.2.0
+    dev: false
+
+  /@tauri-apps/plugin-sql@2.2.1:
+    resolution: {integrity: sha512-+pUl3uNRcIWWhU42bJVf8IUrQ2dCGyi6XUI+RZqyr0xer8BoVc1Gj7WpVvjniL73a5lpXCzs0WYdJuiPUm9gCA==}
     dependencies:
       '@tauri-apps/api': 2.2.0
     dev: false
