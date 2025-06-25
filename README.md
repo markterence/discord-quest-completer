@@ -129,7 +129,7 @@ pnpm install
 Make sure to build and copy the dummy game binary from `src-win` and is added on tauri's resources folder.
 
 ```bash
-pnpm build:runner:win && pnpm copy:runner:win
+pnpm build:runner:win && pnpm copy:runner:win && pnpm copy:resources:debug
 ```
 
 Then run the Tauri dev command to start the development server.
