@@ -13,7 +13,6 @@ fn main() -> eframe::Result {
     eframe::run_simple_native("My egui App", options, move |ctx, _frame| {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("My egui Application");
-
         });
     })
 }
