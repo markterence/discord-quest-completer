@@ -8,6 +8,10 @@ export interface GameExecutable {
   segments?: Number;
   is_running?: boolean;
   is_installed?: boolean;
+  /**
+   * A virtual process identifier assigned to the game executable.
+   */
+  vpid?: string;
 }
 export interface Game {
     uid?: string;

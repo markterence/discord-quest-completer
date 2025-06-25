@@ -42,6 +42,7 @@
 </template>
 
 <script setup lang="ts">
+import { useGameRunnerStore } from '@/composables/game-runner';
 import { EXECUTABLE_OS, GameActionsKey } from '@/constants/constants';
 import { GameActionsProvider, type Game, type GameExecutable } from '@/types/types';
 import { path, app } from '@tauri-apps/api';
@@ -57,7 +58,8 @@ const emit = defineEmits<{
     install_and_play: [{game: Game, executable: GameExecutable}]
 }>();
 
-const gameActions = inject<GameActionsProvider>(GameActionsKey);
+// const gameActions = inject<GameActionsProvider>(GameActionsKey);
+const gameActions = useGameRunnerStore();
 
 const filteredExecutables = computed(() => {
     return props.game.executables.filter(executable => {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, useTemplateRef, shallowRef, provide } from 'vue';
-import gameListData from '../assets/gamelist.json';
+import { ref, computed, useTemplateRef, shallowRef, provide, reactive } from 'vue';
+// import gameListData from '../assets/gamelist.json';
 import { onClickOutside, refDebounced, tryOnMounted } from '@vueuse/core';
 import { invoke } from '@tauri-apps/api/core';
 import { randomString } from '@/utils/random-string';
@@ -14,6 +14,7 @@ import { path } from '@tauri-apps/api';
 import { emit, listen } from '@tauri-apps/api/event';
 import { RunBackgroundProcessResultEvent } from '@/services/DiscordQuestHandlerAPI';
 import DiscordQuestHandlerAPI from '@/services/DiscordQuestHandlerAPI';
+import { useGameRunnerStore } from '@/composables/game-runner';
 
 type DialogKey = 
     'none' | 
@@ -21,7 +22,7 @@ type DialogKey =
     'no_game_selected';;
 
 // Game list from JSON file
-const gameDB = ref<Game[]>(gameListData);
+const gameDB = ref<Game[]>([]);
 
 const dialogRef = useTemplateRef<HTMLDialogElement>('dialogRef');
 const searchResultContainerRef = useTemplateRef<HTMLElement>('searchResultContainerRef')
@@ -56,8 +57,20 @@ const searchResults = computed(() => {
 });
 
 // Selected games list
-const gameList = ref<Game[]>([]);
-const selectedGame = ref<Game | null>(null);
+// const gameList = ref<Game[]>([]);
+// const selectedGame = ref<Game | null>(null);
+const gameRunnerStore = useGameRunnerStore();
+
+const {
+    removeGameFromList,
+    canPlayGame,
+    isExecutableRunning,
+    isGameExecutableInstalled,
+    isGameInstalled,
+    gameList,
+    selectedGame,
+} = gameRunnerStore
+
 
 function closeSearchResults() {
     searchResultsIsOpen.value = false;
@@ -68,30 +81,16 @@ function openSearchResults() {
 
 // Function to add a game to the selected list
 function addGameToList(game: Game) {
-    if (!gameList.value.some(g => g.id === game.id)) {
-        gameList.value.push({
-            uid: randomString(),
-            ...game
-        });
-    }
-
+    gameRunnerStore.addGameToList(game);
     closeSearchResults();
 }
 
-// Function to remove a game from the selected list
-function removeGameFromList(game: Game) {
-    const gameId = game.uid;
-    gameList.value = gameList.value.filter(game => game.uid !== gameId);
-    if (selectedGame.value?.uid === gameId) {
-        selectedGame.value = null;
-    }
-}
-
 function selectGame(game: Game) {
-    selectedGame.value = game;
+    console.log('select game', game)
+    gameRunnerStore.selectedGame.value = game;
     searchResultsIsOpen.value = false;
-
 }
+
 function canCreateDummyGame(game: Game | null) {
     if (!game) {
         return false;
@@ -100,39 +99,13 @@ function canCreateDummyGame(game: Game | null) {
     return !game.is_installed
 }
 
-function canPlayGame(game: Game | null) {
-    if (!game) {
-        return false;
-    }
-    // we can only play a game if the game is installed and not running
-    return (game.is_installed && !game.is_running) ?? false;
-}
-
-function isExecutableRunning(executable: GameExecutable) {
-    // Check if the executable is running
-    return executable.is_running ?? false;
-}
-function isGameExecutableInstalled(executable: GameExecutable) {
-    // Check if the executable is installed
-    return executable.is_installed ?? false;
-}
-
-function isGameInstalled(game: Game | null) {
-    if (!game) {
-        return false;
-    }
-    // we can only play a game if the game is installed and not running
-    return game.is_installed ?? false;
-}
-
-
 // Create a dummy game
 async function createDummyGame(game: Game | null, executable: GameExecutable) {
     if (!game) {
         return;
     }
     const gameUid = game.uid;
-    const gameToInstall = gameList.value.find(g => g.uid === gameUid);
+    const gameToInstall = gameRunnerStore.gameList.value.find(g => g.uid === gameUid);
     const executableItem = gameToInstall?.executables.find(exe => exe.name === executable.name);
     if (gameToInstall && executableItem) {
         const payload =  { 
@@ -144,8 +117,14 @@ async function createDummyGame(game: Game | null, executable: GameExecutable) {
         console.log(payload);
         const result = await invoke('create_fake_game', payload)
         console.log('Game created:', result);
-        gameToInstall.is_installed = true;
-        executableItem.is_installed = true;
+
+        gameRunnerStore.updateGameByUID(gameToInstall.id, { 
+            is_installed: true
+        }) 
+        gameRunnerStore.updateExecutableByName(gameToInstall, executableItem.name, { 
+            is_installed: true
+        })
+
         return true;
     }
 }
@@ -172,7 +151,7 @@ async function playGame({game, executable}: {game: Game, executable: GameExecuta
         console.log(`Playing game: ${gameUid}`);
         currentlyPlaying.value = game.id;
         // find the game in the list
-        const gameToPlay = gameList.value.find(g => g.uid === gameUid);
+        const gameToPlay = gameRunnerStore.gameList.value.find(g => g.uid === gameUid);
         const executableItem = gameToPlay?.executables.find(exe => exe.name === executable.name);
         if (gameToPlay && executableItem) {
             const payload =  { 
@@ -182,10 +161,10 @@ async function playGame({game, executable}: {game: Game, executable: GameExecuta
                 app_id: Number(gameToPlay.id),
                 exec_path: await path.join(executable.path!, executable.filename!),
             } 
-            await DiscordQuestHandlerAPI.runBackgroundProcess(payload);
-            gameToPlay.is_running = true;
-            executableItem.vpid = randomString(10); // Generate a virtual process ID for the selected executable
-            executableItem.is_running = true; 
+            DiscordQuestHandlerAPI.runBackgroundProcess(payload).then();
+            // gameToPlay.is_running = true;
+            // executableItem.vpid = randomString(10); // Generate a virtual process ID for the selected executable
+            // executableItem.is_running = true; 
         }
         // In a real app, this would invoke a Tauri command to launch the game
        
@@ -204,7 +183,7 @@ async function stopPlaying({game, executable}: {game: Game, executable: GameExec
     
     currentlyPlaying.value = null;
 
-    const gameToPlay = gameList.value.find(g => g.uid === gameUid);
+    const gameToPlay = gameRunnerStore.gameList.value.find(g => g.uid === gameUid);
     const executableItem = gameToPlay?.executables.find(exe => exe.name === executable.name);
     if (gameToPlay && executableItem) {
         await invoke('stop_process', {
@@ -220,7 +199,7 @@ function virtualStopPlayingByExecPath(execPath: string) {
     console.log('Stopping game by executable path:', execPath);
     const toPathId = (p: string) => p.split(/\\|\//).join(''); 
 
-    const gameToStop = gameList.value.find(g => g.executables.some(exe => {
+    const gameToStop = gameRunnerStore.gameList.value.find(g => g.executables.some(exe => {
         if (!exe.path) return false;
         return toPathId(exe.path) === toPathId(execPath);
     }));
@@ -249,7 +228,7 @@ async function handleTestRPC(game: Game | null) {
         // await invoke('connect_to_discord_rpc_2', { app_id: "0", discord_state: "disconnect" })
         // invoke('connect_to_discord_rpc_3', {
         //     activity_json: JSON.stringify({
-        //         app_id: selectedGame.value?.id
+        //         app_id: gameRunnerStore.selectedGame.value?.id
         //     }),
         //     action: 'disconnect',
         // })
@@ -269,7 +248,7 @@ async function continueRPCRisk(game: Game | null) {
         return;
     }
     const gameUid = game.uid;
-    const gameToTest = gameList.value.find(g => g.uid === gameUid);
+    const gameToTest = gameRunnerStore.gameList.value.find(g => g.uid === gameUid);
     if (gameToTest) {
         console.log('Testing RPC for game:', gameToTest);
         isConnecting.value = true;
@@ -316,7 +295,7 @@ function hideDialog() {
 
 tryOnMounted(async () => {
     // Initialize game list with fake data
-    // gameList.value = await fakeGames();
+    // gameRunnerStore.gameList.value = await fakeGames();
 });
 
 listen<RunBackgroundProcessResultEvent>(DiscordQuestHandlerAPI.EVENTS.background_process_result, (event) => {
@@ -325,7 +304,10 @@ listen<RunBackgroundProcessResultEvent>(DiscordQuestHandlerAPI.EVENTS.background
         return;
     } 
     console.log('Background process status:', event.payload);
-
+    const payload = event.payload;
+    
+    gameRunnerStore.updateExecutableRunStatus(payload.full_executable_path, payload.running);
+    
 })
 
 provide<GameActionsProvider>(GameActionsKey, {
@@ -390,7 +372,7 @@ provide<GameActionsProvider>(GameActionsKey, {
             </div>
         </dialog>
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-            Handler
+            Handler V2
         </h1>
 
         <!-- Search Bar -->
