@@ -7,6 +7,7 @@ use tauri::{path::BaseDirectory, AppHandle, Emitter, Listener, Manager};
 
 mod rpc;
 mod runner;
+mod commands;
 
 // Global static instance of the Discord client
 static DISCORD_CLIENT: OnceCell<Mutex<Option<rpc::Client>>> = OnceCell::new();
@@ -275,6 +276,7 @@ fn connect_to_discord_rpc_3(handle: AppHandle, activity_json: String, action: St
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
@@ -282,7 +284,8 @@ pub fn run() {
             create_fake_game,
             stop_process,
             connect_to_discord_rpc_3,
-            run_background_process
+            run_background_process,
+            commands::detectables::get_embedded_gamelist
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
