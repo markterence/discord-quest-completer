@@ -26,6 +26,9 @@ const DiscordQuestHandlerAPI = {
     EVENTS,
     runBackgroundProcess (payload: RunBackgroundProcessPayload) {    
         return invoke('run_background_process', payload);
-    }
+    },
+    getEmbeddedGamelist(): Promise<string> {
+        return invoke('get_embedded_gamelist');
+    },
 }
 export default DiscordQuestHandlerAPI;
