@@ -26,3 +26,5 @@ dist-ssr
 _target
 # Exclude binaries and executables these are built by the build process
 src-tauri/resources/*.exe
+# ensure we don't accidentally commit any built windows executables 
+*.exe
