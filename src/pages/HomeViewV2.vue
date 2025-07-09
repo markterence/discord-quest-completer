@@ -15,6 +15,7 @@ import { emit, listen } from '@tauri-apps/api/event';
 import { RunBackgroundProcessResultEvent } from '@/services/DiscordQuestHandlerAPI';
 import DiscordQuestHandlerAPI from '@/services/DiscordQuestHandlerAPI';
 import { useGameRunnerStore } from '@/composables/game-runner';
+import { generateSearchRegex } from '@/utils/search';
 
 type DialogKey = 
     'none' | 
@@ -50,10 +51,17 @@ onClickOutside(searchResultContainerRef, () => {
 const searchResults = computed(() => {
     if (!debouncedSearchQuery.value) return [];
     const query = debouncedSearchQuery.value.toLowerCase();
-    return gameDB.value.filter(game =>
-        game.name.toLowerCase().includes(query) ||
-        game.aliases?.some(alias => alias.toLowerCase().includes(query))
-    );
+    const reg = generateSearchRegex(query)
+    if (reg) {
+        return gameDB.value.filter(
+            game => reg.test(game.name.toLowerCase()) || game.aliases?.some(alias => reg.test(alias.toLowerCase()))
+        );
+    }
+    return gameDB.value;
+    // return gameDB.value.filter(game =>
+    //     game.name.toLowerCase().includes(query) ||
+    //     game.aliases?.some(alias => alias.toLowerCase().includes(query))
+    // );
 });
 
 // Selected games list
@@ -216,7 +224,7 @@ function getExecutables(game: Game) {
     return game.executables.map(exe => exe.name)
 }
 
-async function handleTestRPC(game: Game | null) {
+async function handleTestRPC(game: Game | null | undefined) {
     let state = isConnectedToRPC.value ? 'disconnect' : 'connect';
 
     console.log('Testing RPC for game:', game);
@@ -243,7 +251,7 @@ async function handleTestRPC(game: Game | null) {
     showDialog('rpc_message_1');
 }
 
-async function continueRPCRisk(game: Game | null) {
+async function continueRPCRisk(game: Game | null | undefined) {
     if (!game) {
         return;
     }
@@ -296,6 +304,9 @@ function hideDialog() {
 tryOnMounted(async () => {
     // Initialize game list with fake data
     // gameRunnerStore.gameList.value = await fakeGames();
+    const gamelistRaw = await DiscordQuestHandlerAPI.getEmbeddedGamelist()
+    gameDB.value = JSON.parse(gamelistRaw) as Game[];
+    console.log('Game list initialized');
 });
 
 listen<RunBackgroundProcessResultEvent>(DiscordQuestHandlerAPI.EVENTS.background_process_result, (event) => {
