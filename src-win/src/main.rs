@@ -6,8 +6,8 @@ mod tray;
 use tray::create_tray_icon;
 use std::env;
 
-const WIDTH: usize = 200;
-const HEIGHT: usize = 200;
+const WIDTH: usize = 540;
+const HEIGHT: usize = 320;
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -25,13 +25,13 @@ fn main() {
                 borderless: true,
                 none: false,
                 title: true,
-                resize: false,
+                resize: true,
                 scale: Scale::X1,
                 scale_mode: ScaleMode::Center,
                 topmost: false,
         }
     ).expect("Unable to create the window");
-    window.set_target_fps(15); 
+    window.set_target_fps(30); 
 
     #[allow(unused_variables, unused_mut)]
     let mut buffer = vec![0u32; WIDTH * HEIGHT];
