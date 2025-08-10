@@ -9,6 +9,8 @@
     "core:default",
     "opener:default",
     "sql:default",
+    "http:default",
+    "fs:default",
     "http:default"
   ]
 }
