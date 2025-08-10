@@ -1,13 +1,16 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use once_cell::sync::OnceCell;
-use std::env;
+use std::{collections::HashMap, env};
 use std::path::Path;
 use std::sync::Mutex;
 use tauri::{path::BaseDirectory, AppHandle, Emitter, Listener, Manager};
 
+use crate::commands::game_dispatcher::GameDispatcherState;
+
+pub mod event;
+mod commands;
 mod rpc;
 mod runner;
-mod commands;
 
 // Global static instance of the Discord client
 static DISCORD_CLIENT: OnceCell<Mutex<Option<rpc::Client>>> = OnceCell::new();
@@ -71,110 +74,6 @@ async fn create_fake_game(
         )),
         Err(e) => Err(format!("Failed to copy dummy executable: {}", e)),
     }
-}
-
-#[tauri::command(rename_all = "snake_case")]
-async fn run_background_process(
-    handle: tauri::AppHandle,
-    path: String,
-    executable_name: String,
-    path_len: i64,
-    app_id: i64,
-) {
-    let app = handle.clone();
-
-    let exe_path = env::current_exe().unwrap_or_default();
-    let exe_dir = exe_path.parent().unwrap_or_else(|| Path::new(""));
-
-    let normalized_path = Path::new(&path).to_string_lossy().to_string();
-
-    let game_folder_path = exe_dir
-        .join("games")
-        .join(app_id.to_string())
-        .join(&normalized_path);
-    let executable_path = game_folder_path.join(&executable_name);
-    // const DETACHED_PROCESS: u32 = 0x00000008;
-    // const CREATE_NO_WINDOW: u32 = 0x08000000; // Hide the window
-
-    let normalized_path_clone = normalized_path.clone();
-    let executable_name_clone = executable_name.clone();
-
-    // tauri::async_runtime::spawn(async move {
-    let spawn_result = std::process::Command::new(&executable_path)
-        .current_dir(game_folder_path) // Set working directory to the game folder
-        .spawn();
-
-    match spawn_result {
-        Ok(mut child) => {
-            let pid = child.id();
-
-            let running_payload = serde_json::json!({
-                "app_id": app_id.to_string(),
-                "executable_name": executable_name.clone(),
-                "full_executable_path": Path::new(&normalized_path_clone)
-                    .join(&executable_name_clone)
-                    .to_string_lossy()
-                    .to_string(),
-                "running": true,
-                "pid": pid,
-            });
-            // Emit to tell the frontend that the process is running with the PID
-            handle
-                .emit("background_process_result", running_payload)
-                .unwrap_or_else(|e| eprintln!("Failed to emit event: {}", e));
-
-            let status = child.wait().expect("Failed to wait on child");
-            let exited_payload: serde_json::Value = serde_json::json!({
-                "app_id": app_id.to_string(),
-                "executable_name": executable_name.clone(),
-                "full_executable_path": Path::new(&normalized_path_clone)
-                    .join(&executable_name_clone)
-                    .to_string_lossy()
-                    .to_string(),
-                "pid": pid,
-                "status": status.code(),
-                "running": false,
-            });
-            handle
-                .emit("background_process_result", exited_payload)
-                .unwrap_or_else(|e| eprintln!("Failed to emit event: {}", e));
-        }
-        Err(e) => {
-            // Emit running: false with error, no pid
-            let error_payload = serde_json::json!({
-                "app_id": app_id.to_string(),
-                "executable_name": executable_name.clone(),
-                "full_executable_path": Path::new(&normalized_path_clone)
-                    .join(&executable_name_clone)
-                    .to_string_lossy()
-                    .to_string(),
-                "pid": null,
-                "running": false,
-                "error": e.to_string(),
-            });
-            handle
-                .emit("background_process_result", error_payload)
-                .unwrap_or_else(|e| eprintln!("Failed to emit event: {}", e));
-        }
-    }
-
-    // match status.success() {
-    //     true => Ok("Process started successfully".to_string()),
-    //     false => Err(format!("Failed to start process. Process exited with status: {:?}", status.code()))
-    // }
-    // });
-
-    // app.listen("stop_process", move |_| {
-    //     println!("Disconnecting from Discord RPC...");
-    //     task.abort();
-    // });
-    // match std::process::Command::new(&executable_path)
-    //     .current_dir(game_folder_path) // Set working directory to the game folder
-    //     .spawn()
-    // {
-    //     Ok(_) => Ok("Process started successfully".to_string()),
-    //     Err(e) => Err(format!("Failed to start process: {}", e))
-    // }
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -276,15 +175,18 @@ fn connect_to_discord_rpc_3(handle: AppHandle, activity_json: String, action: St
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
+        .manage(GameDispatcherState(Mutex::new(HashMap::new())))
         .invoke_handler(tauri::generate_handler![
             greet,
             create_fake_game,
             stop_process,
             connect_to_discord_rpc_3,
-            run_background_process,
+            commands::game_dispatcher::launch_executable, 
+            commands::game_dispatcher::stop_executable, 
             commands::detectables::get_embedded_gamelist
         ])
         .run(tauri::generate_context!())
