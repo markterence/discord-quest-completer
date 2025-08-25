@@ -33,6 +33,8 @@ pub struct InternalDispatchedItem {
 }
 pub struct GameDispatcherState (pub Mutex<HashMap<i64, DispatchedItem>>);
 
+// Launches the executable using tokio::process::Command and waits for the process to exit.
+// This way we knows when the process has exited and ping the frontend that the process has exited.
 #[tauri::command(rename_all = "snake_case")]
 pub async fn launch_executable(
     handle: tauri::AppHandle,
@@ -152,7 +154,12 @@ pub async fn launch_executable(
     }
 }
 
+// I can't find a way to reference the child process while it's being waited by the tokio::spawn or command spawn
+// and then stop it, so we need to stop it using OS level commands such as `taskkill` on Windows.
+// Similar:
+// - [Kill child process while waiting for it](https://stackoverflow.com/questions/35093869/kill-child-process-while-waiting-for-it)
 fn stop_dispatched_item(item: &DispatchedItem) -> Result<(), String> {
+
     let pid = item.pid.ok_or("No PID stored for this dispatched item")?;
     let mut sys = System::new_all();
     sys.refresh_processes_specifics(ProcessesToUpdate::All, true,
@@ -210,7 +217,10 @@ pub async fn stop_executable(handle: tauri::AppHandle ,state: State<'_, GameDisp
             return Err(format!("No running process found for app_id: {}", app_id));
         }
     };
+    
     stop_dispatched_item(&item)?;
+
+    // Prepare the payload to emit to the frontend
     let stopped_payload = ExeProcessPayload {
         app_id: x.to_string(),
         executable_name: item.executable_name,  
