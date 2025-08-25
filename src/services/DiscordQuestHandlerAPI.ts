@@ -25,7 +25,13 @@ export type RunBackgroundProcessPayload = {
 const DiscordQuestHandlerAPI = { 
     EVENTS,
     runBackgroundProcess (payload: RunBackgroundProcessPayload) {    
-        return invoke('run_background_process', payload);
+        return invoke('launch_executable', payload);
+    },
+    launchExecutable (payload: RunBackgroundProcessPayload) {
+        return invoke('launch_executable', payload);
+    },
+    stopExecutable (appId: number) {
+        return invoke('stop_executable', { app_id: appId.toString() });
     },
     getEmbeddedGamelist(): Promise<string> {
         return invoke('get_embedded_gamelist');
