@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, useTemplateRef, shallowRef, provide, reactive } from 'vue';
 // import gameListData from '../assets/gamelist.json';
-import { onClickOutside, refDebounced, tryOnMounted } from '@vueuse/core';
+import { createRef, onClickOutside, refDebounced, tryOnMounted } from '@vueuse/core';
 import { invoke } from '@tauri-apps/api/core';
 import { randomString } from '@/utils/random-string';
 import { GameActionsProvider, GameExecutable, type Game } from '@/types/types';
 import { fakeGames } from '@/services/fake-games';
 import IconVerified from '@/components/IconVerified.vue';
-import { isEmpty } from 'lodash-es';
+import { isEmpty, update } from 'lodash-es';
 import GameExecutables from '@/components/GameExecutables.vue';
 import { GameActionsKey } from '@/constants/constants';
 import { path } from '@tauri-apps/api';
@@ -16,6 +16,7 @@ import { RunBackgroundProcessResultEvent } from '@/services/DiscordQuestHandlerA
 import DiscordQuestHandlerAPI from '@/services/DiscordQuestHandlerAPI';
 import { useGameRunnerStore } from '@/composables/game-runner';
 import { generateSearchRegex } from '@/utils/search';
+import { safeParseJSON } from '@/utils/json-parse';
 
 type DialogKey = 
     'none' | 
@@ -23,8 +24,28 @@ type DialogKey =
     'no_game_selected';;
 
 // Game list from JSON file
-const gameDB = ref<Game[]>([]);
+// const gameDB = ref<Game[]>([]);
+const gameRunnerStore = useGameRunnerStore();
 
+const {
+    removeGameFromList,
+    canPlayGame,
+    isExecutableRunning,
+    isGameExecutableInstalled,
+    isGameInstalled,
+    gameList,
+    selectedGame,
+    gameDB,
+} = gameRunnerStore
+
+const notificationMessages = {
+    empty: '',
+    updatingGameList: 'Updating game list...',
+    updateFailed: 'Failed to update game list.',
+    updateSuccess: 'Game list updated successfully.',
+};
+const showNotification = ref(false);
+const notificationMessage = ref(notificationMessages.empty);
 const dialogRef = useTemplateRef<HTMLDialogElement>('dialogRef');
 const searchResultContainerRef = useTemplateRef<HTMLElement>('searchResultContainerRef')
 const dialogMessage = ref('');
@@ -67,17 +88,6 @@ const searchResults = computed(() => {
 // Selected games list
 // const gameList = ref<Game[]>([]);
 // const selectedGame = ref<Game | null>(null);
-const gameRunnerStore = useGameRunnerStore();
-
-const {
-    removeGameFromList,
-    canPlayGame,
-    isExecutableRunning,
-    isGameExecutableInstalled,
-    isGameInstalled,
-    gameList,
-    selectedGame,
-} = gameRunnerStore
 
 
 function closeSearchResults() {
@@ -194,9 +204,11 @@ async function stopPlaying({game, executable}: {game: Game, executable: GameExec
     const gameToPlay = gameRunnerStore.gameList.value.find(g => g.uid === gameUid);
     const executableItem = gameToPlay?.executables.find(exe => exe.name === executable.name);
     if (gameToPlay && executableItem) {
-        await invoke('stop_process', {
-            exec_name: executable.filename!
-        })
+        // await invoke('stop_process', {
+        //     exec_name: executable.filename!
+        // })
+        await DiscordQuestHandlerAPI.stopExecutable(Number(gameToPlay.id));
+        
         gameToPlay.is_running = false;
         executableItem.is_running = false;
     }
@@ -301,14 +313,25 @@ function hideDialog() {
     isDialogOpen.value = false;
 }
 
+async function fetchRemoteGameList() {
+    const url_default = 'https://localhost:1420/detectables.json';
+    const url_proxy = '/api/detectable';
+    const response = await fetch(url_proxy, {
+        method: 'GET',
+    });
+    const result = await response.json();
+    console.log('Fetched remote game list:', result);
+    gameRunnerStore.loadLocalGameDB(safeParseJSON<Game[]>(result, []));
+
+}
 tryOnMounted(async () => {
     // Initialize game list with fake data
     // gameRunnerStore.gameList.value = await fakeGames();
     const gamelistRaw = await DiscordQuestHandlerAPI.getEmbeddedGamelist()
-    gameDB.value = JSON.parse(gamelistRaw) as Game[];
-    console.log('Game list initialized');
+    gameRunnerStore.loadLocalGameDB(safeParseJSON<Game[]>(gamelistRaw, []));
+    fetchRemoteGameList()
 });
-
+ 
 listen<RunBackgroundProcessResultEvent>(DiscordQuestHandlerAPI.EVENTS.background_process_result, (event) => {
     if (!event.payload) {
         console.error('No payload received from background process exit event');
@@ -330,7 +353,7 @@ provide<GameActionsProvider>(GameActionsKey, {
 </script>
 
 <template>
-    <div class="container mx-auto px-4 py-8">
+    <div class="container mx-auto px-4 py-8 relative">
         <!-- Center dialog -->
         <dialog id="dialog" class="dialogStyle inset-0 bg-gray-800 bg-opacity-50
         border border-gray-300 dark:border-gray-600 rounded-lg
@@ -382,9 +405,20 @@ provide<GameActionsProvider>(GameActionsKey, {
                 </div>
             </div>
         </dialog>
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
-            Handler V2
-        </h1>
+
+        <div 
+            v-if="showNotification"
+            class="absolute top-0 left-0 mt-2
+                transition-opacity duration-300 ease-in-out
+                text-gray-500 dark:text-gray-400 z-20 bg-white/80 dark:bg-gray-800/80 px-4 py-2 rounded shadow"
+        >
+            {{ notificationMessage }}
+        </div>
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6 text-center">
+                Handler V2
+            </h1>
+        </div>
 
         <!-- Search Bar -->
         <div class="mb-8">
