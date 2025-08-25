@@ -8,7 +8,12 @@ const toPathId = (p: string) => p.split(/\\|\//).join('');
 export const useGameRunnerStore = createGlobalState(() => {
     const gameList = ref<Game[]>([]);
     const selectedGame = ref<Game | null>();
+    const gameDB = ref<Game[]>([]);
 
+    function loadLocalGameDB(db: Game[]) {
+        gameDB.value = db;
+    }
+    
     function addGameToList(game: Game) {
         if (!gameList.value.some(g => g.id === game.id)) {
             gameList.value.push({
@@ -65,7 +70,14 @@ export const useGameRunnerStore = createGlobalState(() => {
     }
 
     function getExecutableByPath(game: Game | null | undefined, execPath: string) {
-        return game?.executables.find(exe => toPathId(exe.path!) === toPathId(execPath));
+        console.log('getExecutableByPath', {
+            execPath,
+            toPathId: toPathId(execPath),
+            game,
+        }) 
+        const gameExec = game?.executables.find(exe => toPathId(exe.name!) === toPathId(execPath));
+        
+        return gameExec;
     }
 
     function getGameByExecutable(execPath: string) {
@@ -80,11 +92,17 @@ export const useGameRunnerStore = createGlobalState(() => {
         const gameToUpdate = getGameByExecutable(execPath);
         console.log('updateExecutableRunStatus.gameToUpdate', gameToUpdate)
         if(gameToUpdate) {
-            console.log('updateExecutableRunStatus.execPath', execPath)
-            const executable = getExecutableByPath(gameToUpdate, execPath);
-            console.log('updateExecutableRunStatus.executable', executable)
-            if (executable) {
-                executable['is_running'] = runStatus;
+            try {
+                console.log('updateExecutableRunStatus.execPath', execPath)
+                console.log('why it stops')
+                const executable = getExecutableByPath(gameToUpdate, execPath);
+                console.log('updateExecutableRunStatus.executable', executable)
+                if (executable) {
+                    executable['is_running'] = runStatus;
+                }
+                console.log('executable after update', executable)
+            } catch (error) {
+                console.error('Error updating executable run status:', error);
             }
         }
     }
@@ -112,6 +130,9 @@ export const useGameRunnerStore = createGlobalState(() => {
     return {
         gameList,
         selectedGame,
+        gameDB,
+
+        loadLocalGameDB,
 
         addGameToList,
         removeGameFromList,
