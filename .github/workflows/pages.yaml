@@ -1,0 +1,45 @@
+name: Update Detectable
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # every day at midnight
+  workflow_dispatch:
+
+jobs:
+  pages_deploy:
+    # Required permissions for GitHub Pages deployment
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    # Required for GitHub Pages deployment
+    environment:
+      name: github-pages
+      url: ${{steps.deployment.outputs.page_url}}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Game list
+        shell: bash
+        env:
+          DETECTABLE_ENDPOINT: ${{ secrets.DETECTABLE_ENDPOINT }}
+          DETECTABLE_VERSIONED_ENDPOINT: ${{ secrets.DETECTABLE_VERSIONED_ENDPOINT }}
+          DETECTABLE_VERSION: ${{ vars.DETECTABLE_VERSION }}
+        run: |
+          curl -fsSL -o detectable.json $DETECTABLE_ENDPOINT || echo '{}' > detectable.json
+          curl -fsSL -o detectable_${DETECTABLE_VERSION}.json $DETECTABLE_VERSIONED_ENDPOINT || echo '{}' > detectable_${DETECTABLE_VERSION}.json
+
+          [ ! -s detectable.json ] && echo "detectable.json is empty"
+          [ ! -s detectable_${DETECTABLE_VERSION}.json ] && echo "versioned json is empty"
+
+          mkdir -p dist
+          mv detectable.json dist/
+          mv detectable_${DETECTABLE_VERSION}.json dist/
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
