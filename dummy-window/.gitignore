@@ -1,0 +1,53 @@
+## Ignore Visual Studio files
+.vs/
+*.user
+*.suo
+
+## Build results
+bin/
+obj/
+
+## NuGet
+*.nupkg
+*.snupkg
+packages/
+*.nuspec
+project.lock.json
+project.fragment.lock.json
+
+## MSBuild binary log
+*.binlog
+
+## Rider
+.idea/
+
+## Windows image thumbnails
+Thumbs.db
+
+## Mac system files
+.DS_Store
+
+## User-specific files
+*.userprefs
+*.userosscache
+*.sln.docstates
+
+## Logs
+*.log
+
+## Others
+*.bak
+*.cache
+*.tmp
+*.db
+
+## .NET-generated
+project.assets.json
+*.tlog
+*.pidb
+*.psess
+*.vsp
+*.pdb
+
+## VSCode (if using)
+.vscode/
