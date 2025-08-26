@@ -327,8 +327,8 @@ async function fetchRemoteGameList() {
 tryOnMounted(async () => {
     // Initialize game list with fake data
     // gameRunnerStore.gameList.value = await fakeGames();
-    const gamelistRaw = await DiscordQuestHandlerAPI.getEmbeddedGamelist()
-    gameRunnerStore.loadLocalGameDB(safeParseJSON<Game[]>(gamelistRaw, []));
+    // const gamelistRaw = await DiscordQuestHandlerAPI.getEmbeddedGamelist()
+    // gameRunnerStore.loadLocalGameDB(safeParseJSON<Game[]>(gamelistRaw, []));
     fetchRemoteGameList()
 });
  
