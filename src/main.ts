@@ -1,5 +1,9 @@
-import { createApp } from "vue";
 import '@/theme/style.css'
 import App from "./App.vue";
+import DQC from "./DQC";
+import { router } from "./router";
 
-createApp(App).mount("#app");
+export const app = DQC(App, {
+    router,
+    modules: []
+});

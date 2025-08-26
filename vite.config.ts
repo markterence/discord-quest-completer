@@ -1,13 +1,21 @@
 import path from 'node:path'
 import { defineConfig } from "vite";
+import VueRouter from 'unplugin-vue-router/vite'
 import vue from "@vitejs/plugin-vue";
 import tailwindcss from '@tailwindcss/vite'
+
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
-  plugins: [vue(), tailwindcss()],
+  plugins: [
+    VueRouter({
+      /* options */
+    }),
+    vue(), 
+    tailwindcss()
+  ],
 
   resolve: {
     alias: {
@@ -34,6 +42,14 @@ export default defineConfig(async () => ({
     watch: {
       // 3. tell vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
-    },
+    }, 
+    proxy: {
+      "/api/detectable": {
+        target: "https://markterence.github.io/discord-quest-completer/detectable.json",
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api\/detectable/, ''),
+      },
+    }, 
   },
 }));
+ 
