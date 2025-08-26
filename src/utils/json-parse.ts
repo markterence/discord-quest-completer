@@ -1,4 +1,4 @@
-export function safeParseJSON<T>(jsonString: unknown, defaultValue: T): T{
+export function safeParseJSON<T>(jsonString: unknown, defaultValue: T): T | undefined {
     try {
         if (typeof jsonString === 'string') {
             return JSON.parse(jsonString) as T;
