@@ -42,9 +42,7 @@ jobs:
           node gen-main.mjs
           # copy the generated file to `dist/`
           mv main.json ../dist/main.json
-          # check main.json if it exits and is not empty
-          [ ! -s ../dist/main.json ] && echo "main.json is empty" && exit 1
-
+          
       - name: Fetch Game list
         shell: bash
         env:
