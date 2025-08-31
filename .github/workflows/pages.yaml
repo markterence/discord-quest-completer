@@ -1,9 +1,18 @@
 name: Update Detectable
 
+# Also run automatic when where is change on `pages-src/` folder
 on:
   schedule:
     - cron: '0 0 * * *' # every day at midnight
   workflow_dispatch:
+  push:
+    branches:
+      - main
+      - next
+    paths:
+      - 'pages-src/**'
+      - '.github/workflows/pages.yaml'
+
 
 jobs:
   pages_deploy:
@@ -48,7 +57,7 @@ jobs:
           # creates a `main.json` file in `pages-src`
           node gen-main.mjs
           # copy the generated file to `dist/`
-          mv main.json ../dist/
+          mv main.json ../dist/main.json
           # check main.json if it exits and is not empty
           [ ! -s ../dist/main.json ] && echo "main.json is empty" && exit 1
       

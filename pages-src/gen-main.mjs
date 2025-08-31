@@ -6,7 +6,7 @@ const buildDiscordAPIUrl = (ver = '') => {
         'http://',
         'discord.com',
         '/api',
-        `${DISCORD_API_VERSION}`,
+        `${ver}`,
         '/applications',
         '/detectable'
     ];
