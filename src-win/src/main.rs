@@ -1,11 +1,11 @@
 #![windows_subsystem = "windows"] 
 
-use windows::Win32::Foundation::{HWND, HINSTANCE, LPARAM, LRESULT, WPARAM, COLORREF, RECT};
+use windows::Win32::Foundation::{COLORREF, HINSTANCE, HWND, LPARAM, LRESULT, RECT, SIZE, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExA, DefWindowProcA, DispatchMessageA, GetClientRect, GetMessageA, GetWindowLongPtrA, PostQuitMessage, RegisterClassA, SetWindowLongPtrA, SetWindowPos, ShowWindow, TranslateMessage, CW_USEDEFAULT, GWL_EXSTYLE, HMENU, MSG, SWP_NOZORDER, SW_HIDE, SW_SHOWNOACTIVATE, SW_SHOWNORMAL, WINDOW_EX_STYLE, WINDOW_STYLE, WM_COMMAND, WM_CTLCOLORSTATIC, WM_DESTROY, WM_SIZE, WNDCLASSA, WS_CHILD, WS_EX_APPWINDOW, WS_EX_LAYERED, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_OVERLAPPEDWINDOW, WS_VISIBLE
 };
 use windows::Win32::UI::Shell::ShellExecuteW;
-use windows::Win32::Graphics::Gdi::{HDC, SetBkMode, GetStockObject, NULL_BRUSH, TRANSPARENT};
+use windows::Win32::Graphics::Gdi::{GetDC, GetStockObject, GetTextExtentPoint32A, ReleaseDC, SetBkMode, HDC, NULL_BRUSH, TRANSPARENT};
 use windows::Win32::System::LibraryLoader::{GetModuleHandleA};
 use windows::core::{PCSTR};
 use std::ffi::CString;
@@ -30,7 +30,7 @@ struct Config {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            title: "Windows API".to_string(),
+            title: "Discord Quest Completer".to_string(),
             start_minimized: false,
         }
     }
@@ -64,20 +64,48 @@ fn parse_args() -> Config {
     config
 }
 
-fn create_label(parent_hwnd: HWND, text: &str, instance: HINSTANCE) -> Option<HWND> {
+fn calculate_text_width(hwnd: HWND, text: &str) -> i32 {
+    unsafe {
+        let hdc = GetDC(Some(hwnd));
+        if hdc.is_invalid() {
+            return 200; // fallback width
+        }
+        
+        let text_bytes = text.as_bytes();
+        let mut size = SIZE::default();
+        
+        let result = GetTextExtentPoint32A(
+            hdc,
+            text_bytes,
+            &mut size
+        );
+        
+        let _ = ReleaseDC(Some(hwnd), hdc);
+        
+        if result.as_bool() {
+            size.cx + 20 // Add 20px padding
+        } else {
+            200 // fallback width
+        }
+    }
+}
+
+
+fn create_label(parent_hwnd: HWND, text: &str, instance: HINSTANCE, x: i32, y:i32, w:Option<i32>, h:i32) -> Option<HWND> {
     unsafe {
         let class_name = CString::new("STATIC").ok()?;
         let window_text = CString::new(text).ok()?;
-        
+         // Calculate width dynamically if not provided
+        let width = w.unwrap_or_else(|| calculate_text_width(parent_hwnd, text));
         let label_hwnd: Result<HWND, windows::core::Error> = CreateWindowExA(
             WS_EX_TRANSPARENT, // Transparent background
             PCSTR(class_name.as_ptr() as *const u8), // Class name
             PCSTR(window_text.as_ptr() as *const u8), // Window text
             WS_CHILD | WS_VISIBLE, // Basic window style
-            10,  // x position
-            10,  // y position  
-            180, // width
-            20,  // height
+            x,  // x position
+            y,  // y position
+            width, // width
+            h,  // height
             Some(parent_hwnd), // Parent window
             None, // Menu
             Some(instance), // Instance handle
@@ -165,7 +193,7 @@ unsafe extern "system" fn window_proc(
         WM_COMMAND => { 
             let control_id = wparam.0 & 0xFFFF;
             if control_id == LINK_BUTTON_ID as usize { 
-                let url = windows::core::w!("https://github.com/");
+                let url = windows::core::w!("https://github.com/markterence/discord-quest-completer");
                 let operation = windows::core::w!("open");
                 let _ = ShellExecuteW(
                     None,
@@ -252,7 +280,13 @@ fn main() {
     };
     
     // Create a Windows label to display the title at the top
-    let title_label_hwnd = create_label(hwnd, &config.title, instance);
+    let title_label_hwnd = create_label(hwnd, &config.title, instance,10,  // x position
+            40,  // y position  
+           None,
+            20,  // height
+    );
+
+    let _app_label_hwnd = create_label(hwnd, "Discord Quest Completer", instance, 10, 10, None, 20);
     
     // Create a link label anchored to the bottom-left
     let link_label_hwnd = create_link_label(hwnd, "Source on Github", instance);
