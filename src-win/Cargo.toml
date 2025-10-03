@@ -4,18 +4,22 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-minifb = "0.28"
-tray-icon = "0.11"
+tray-icon = { version = "0.11" }
 
 [dependencies.windows]
-version = "0.58"
+version = "0.62"
 features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
+    "Win32_System_LibraryLoader",
+    "Win32_UI_Controls",
+    "Win32_Graphics_Gdi",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Shell",
 ]
 
-[dependencies.windows-sys]
-version = "0.59"
+[build-dependencies]
+embed-resource = "3.0.6"
 
 [[bin]]
 name = "src-win"
@@ -27,3 +31,9 @@ lto = true            # Enable Link Time Optimization
 codegen-units = 1     # Reduce parallel code generation units to increase optimization
 panic = "abort"       # Remove panic unwinding code
 strip = true          # Strip symbols from binary
+overflow-checks = false  # Disable overflow checks
+debug = false           # No debug info
+rpath = false           # Disable rpath
+
+[profile.release.package."*"]
+opt-level = "z"         # Apply size optimization to all dependencies
