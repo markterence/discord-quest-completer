@@ -5,7 +5,7 @@ export interface GameExecutable {
   os: string;
   filename?: string;
   path?: string;
-  segments?: Number;
+  segments?: number;
   is_running?: boolean;
   is_installed?: boolean;
 }

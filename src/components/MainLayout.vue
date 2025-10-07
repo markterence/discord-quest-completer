@@ -15,7 +15,7 @@ const { page, setPage } = appState;
     <header class="bg-white dark:bg-gray-800 shadow-md">
       <div class="container mx-auto px-4 py-4 flex items-center justify-between">
         <div class="flex items-center space-x-2">
-          <img src="/tauri.svg" alt="Logo" class="h-8 w-8" />
+          <img src="/logo.svg" alt="Logo" class="h-8 w-8" />
           <h2 class="text-xl font-bold text-gray-900 dark:text-white"></h2>
         </div>
         <nav>

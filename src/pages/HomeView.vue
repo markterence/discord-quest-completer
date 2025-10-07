@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, useTemplateRef, shallowRef, provide } from 'vue';
-import gameListData from '../assets/gamelist.json';
+import { ref, computed, useTemplateRef, shallowRef, provide, nextTick, triggerRef } from 'vue';
+// import gameListData from '../assets/gamelist.json';
 import { onClickOutside, refDebounced, tryOnMounted } from '@vueuse/core';
+import { useFuse } from '@vueuse/integrations/useFuse'
 import { invoke } from '@tauri-apps/api/core';
 import { randomString } from '@/utils/random-string';
 import { GameActionsProvider, GameExecutable, type Game } from '@/types/types';
@@ -11,6 +12,12 @@ import GameExecutables from '@/components/GameExecutables.vue';
 import { GameActionsKey } from '@/constants/constants';
 import { path } from '@tauri-apps/api';
 import { emit } from '@tauri-apps/api/event';
+import { useFetchGameList } from '@/composables/fetch-gamelist';
+import { UseFuseOptions } from '@vueuse/integrations';
+import Fuse from 'fuse.js';
+import { useGlobalState } from '@/composables/app-state';
+import TimedNotification from '@/components/TimedNotification.vue';
+
 
 type DialogKey = 
     'none' | 
@@ -18,7 +25,24 @@ type DialogKey =
     'no_game_selected';;
 
 // Game list from JSON file
-const gameDB = ref<Game[]>(gameListData);
+// const gameDB = ref<Game[]>([]);
+
+const {
+    gameDB,
+    isLoadingBundled,
+    isLoadingDiscord,
+    isLoadingGH,
+    fetchGameList,
+    isReadyGH,
+    isReadyBundled,
+    isReadyDiscord,
+    allFetchDone,
+} = useFetchGameList()
+const { addLog } = useGlobalState();
+const shouldShowNotificationContainer = computed(() => {
+    return isLoadingGH.value || isLoadingDiscord.value || isLoadingBundled.value ||
+           (isReadyGH.value || isReadyDiscord.value || isReadyBundled.value);
+});
 
 const dialogRef = useTemplateRef<HTMLDialogElement>('dialogRef');
 const searchResultContainerRef = useTemplateRef<HTMLElement>('searchResultContainerRef')
@@ -43,18 +67,57 @@ onClickOutside(searchResultContainerRef, () => {
     searchResultsIsOpen.value = false;
 })
 
-const searchResults = computed(() => {
-    if (!debouncedSearchQuery.value) return [];
-    const query = debouncedSearchQuery.value.toLowerCase();
-    return gameDB.value.filter(game =>
-        game.name.toLowerCase().includes(query) ||
-        game.aliases?.some(alias => alias.toLowerCase().includes(query))
-    );
-});
+// const searchResults = computed(() => {
+//     if (!debouncedSearchQuery.value) return [];
+//     const query = debouncedSearchQuery.value.toLowerCase();
+//     return gameDB.value.filter(game =>
+//         game.name.toLowerCase().includes(query) ||
+//         game.aliases?.some(alias => alias.toLowerCase().includes(query))
+//     );
+// });
+
+const COPYRIGHT_SYMBOL = '\u00A9';
+const TRADEMARK_SYMBOL = '\u2122';
+const REGISTERED_SYMBOL = '\u00AE';
+const ignoredSymbols = [COPYRIGHT_SYMBOL, TRADEMARK_SYMBOL, REGISTERED_SYMBOL];
+const ignoredSymbolsRegex = new RegExp(`[${ignoredSymbols.join('')}]`, 'g');
+const fuseOptions = computed<UseFuseOptions<Game>>(() => ({
+    fuseOptions: {
+        // Prioritize name and aliases for searching, then lastly executables
+        keys: [
+            { name: 'name', weight: 0.7 },
+            { name: 'aliases', weight: 0.2 },
+            { name: 'executables.name', weight: 0.1 },
+        ],
+        getFn: (obj: any, path: string[] | string) => {
+            const value = Fuse.config.getFn(obj, path);
+            return typeof value === "string"
+            ? value.replace(ignoredSymbolsRegex, "")
+            : value;
+        },
+        isCaseSensitive: false,
+        threshold: 0.5,        
+        // A score of 0indicates a perfect match, while a score of 1 indicates a complete mismatch
+        includeScore: true,
+        includeMatches: false
+    },
+    resultLimit: 12,
+    matchAllWhenSearchEmpty: false,
+}));
+
+const { results: searchResults } = useFuse(debouncedSearchQuery, gameDB, fuseOptions)
 
 // Selected games list
 const gameList = ref<Game[]>([]);
-const selectedGame = ref<Game | null>(null);
+// const selectedGame = ref<Game | null>(null);
+const selectedGameId = ref<string | null | undefined>(null);
+
+const selectedGame = computed(() => {
+    if (!selectedGameId.value) return null;
+    const found = gameList.value.find(g => g.uid === selectedGameId.value);
+    console.log('selectedGame computed - selectedGameId:', selectedGameId.value, 'found:', found);
+    return found || null;
+});
 
 function closeSearchResults() {
     searchResultsIsOpen.value = false;
@@ -75,20 +138,24 @@ function addGameToList(game: Game) {
     closeSearchResults();
 }
 
+const forceRerenderKey = ref(0); 
 // Function to remove a game from the selected list
 function removeGameFromList(game: Game) {
     const gameId = game.uid;
     gameList.value = gameList.value.filter(game => game.uid !== gameId);
-    if (selectedGame.value?.uid === gameId) {
-        selectedGame.value = null;
+    if (selectedGame.value?.uid === gameId) { 
+        // selectedGame.value = null;
+        selectedGameId.value = null;
+        forceRerenderKey.value++; 
     }
 }
 
 function selectGame(game: Game) {
-    selectedGame.value = game;
+    // selectedGame.value = game;
+    selectedGameId.value = game?.uid;
     searchResultsIsOpen.value = false;
-
 }
+
 function canCreateDummyGame(game: Game | null) {
     if (!game) {
         return false;
@@ -157,6 +224,7 @@ async function installAndPlay({game, executable}: {game: Game, executable: GameE
         playGame({game, executable});
     } else {
         console.error('Failed to create game');
+        addLog('error', 'Failed to create game');
     }
 }
 // Play game function
@@ -167,12 +235,15 @@ async function playGame({game, executable}: {game: Game, executable: GameExecuta
     const gameUid = game.uid;
     try {
         console.log(`Playing game: ${gameUid}`);
+        addLog('info', `Playing game: ${game.name}`);
+        addLog('info', `Executable: ${executable.name}`);
         currentlyPlaying.value = game.id;
         // find the game in the list
         const gameToPlay = gameList.value.find(g => g.uid === gameUid);
         const executableItem = gameToPlay?.executables.find(exe => exe.name === executable.name);
         if (gameToPlay && executableItem) {
             const payload =  { 
+                name: game.name,
                 path: executable.path,
                 executable_name: executable.filename,
                 path_len: executable.segments,
@@ -203,11 +274,23 @@ async function stopPlaying({game, executable}: {game: Game, executable: GameExec
     const gameToPlay = gameList.value.find(g => g.uid === gameUid);
     const executableItem = gameToPlay?.executables.find(exe => exe.name === executable.name);
     if (gameToPlay && executableItem) {
-        await invoke('stop_process', {
-            exec_name: executable.filename!
-        })
-        gameToPlay.is_running = false;
-        executableItem.is_running = false;
+        try {
+            await invoke('stop_process', {
+                exec_name: executable.filename!
+            })
+            addLog('info', `Stopped game process: ${game.name}`);
+            addLog('info', `Stopped Executable: ${executable.name}`);
+        } catch (error) {
+            console.error('Failed to stop game process:', error);
+            const errorMessage = (error instanceof Error) ? error.message : String(error);
+            addLog('error', 'Failed to stop game process' + errorMessage);
+            // Even if stopping fails, we still update the state
+            gameToPlay.is_running = false;
+            executableItem.is_running = false;
+        } finally {
+            gameToPlay.is_running = false;
+            executableItem.is_running = false;
+        }
     }
 }
 
@@ -292,10 +375,6 @@ function hideDialog() {
     isDialogOpen.value = false;
 }
 
-tryOnMounted(async () => {
-    // Initialize game list with fake data
-    // gameList.value = await fakeGames();
-});
 
 provide<GameActionsProvider>(GameActionsKey, {
     canPlayGame,
@@ -362,32 +441,119 @@ provide<GameActionsProvider>(GameActionsKey, {
             Handler
         </h1>
 
+        <!-- refetch game list fetch status. will appear on top left -->
+        <Transition 
+            enter-active-class="transition-opacity duration-300 delay-100 ease-in-out"
+            leave-active-class="transition-opacity duration-600 delay-100 ease-in-out"  
+            enter-from-class="opacity-0 translate-y-2 ease-in-out"
+            enter-to-class="opacity-100 translate-y-0 ease-in-out"
+        >
+            <div class="absolute top-20 left-4 z-20 " v-if="shouldShowNotificationContainer && !allFetchDone">
+                <!-- Fetching from mirror loading indicator --> 
+                <Transition 
+                    enter-active-class="transition-opacity duration-300 delay-100 ease-in-out"
+                    leave-active-class="transition-opacity duration-600 delay-100 ease-in-out"  
+                    enter-from-class="opacity-0 translate-y-2 ease-in-out"
+                    enter-to-class="opacity-100 translate-y-0 ease-in-out"
+                >
+                    <div v-if="isLoadingGH" class="text-sm text-gray-500 dark:text-gray-400">
+                        Fetching game list from GitHub mirror... 
+                      <div class="border-full h-2 w-2 bg-green-500 rounded-full inline-block ml-2 animate-pulse"></div>
+                    </div>
+                </Transition>
+                <TimedNotification
+                    :is-ready="isReadyGH" 
+                    :duration="1500"
+                    container-class="text-sm text-gray-500 dark:text-gray-400"
+                > 
+                    Game list from mirror fetched <span class="text-green-400">✓</span>
+                </TimedNotification>
+
+                <!-- Fetching from Discord loading indicator -->
+                <Transition 
+                    enter-active-class="transition-opacity duration-300 delay-100 ease-in-out"
+                    leave-active-class="transition-opacity duration-600 delay-100 ease-in-out"  
+                    enter-from-class="opacity-0 translate-y-2 ease-in-out"
+                    enter-to-class="opacity-100 translate-y-0 ease-in-out"
+                >
+                    <div v-if="isLoadingDiscord" class="text-sm text-gray-500 dark:text-gray-400">
+                        Fetching game list directly from Discord...
+                        <div class="border-full h-2 w-2 bg-green-500 rounded-full inline-block ml-2 animate-pulse"></div>
+                    </div>
+                </Transition>
+                <TimedNotification
+                    :is-ready="isReadyDiscord" 
+                    :duration="1500"
+                    container-class="text-sm text-gray-500 dark:text-gray-400"
+                > 
+                    Game list from Discord fetched <span class="text-green-400">✓</span>
+                </TimedNotification>
+
+                
+                <!-- Fetching from bundled loading indicator -->
+                <Transition 
+                    enter-active-class="transition-opacity duration-300 delay-100 ease-in-out"
+                    leave-active-class="transition-opacity duration-600 delay-100 ease-in-out"  
+                    enter-from-class="opacity-0 translate-y-2 ease-in-out"
+                    enter-to-class="opacity-100 translate-y-0 ease-in-out"
+                >
+                    <div v-if="isLoadingBundled" class="text-sm text-gray-500 dark:text-gray-400">
+                        Fetching game list from bundled game list...
+                        <div class="border-full h-2 w-2 bg-green-500 rounded-full inline-block ml-2 animate-pulse"></div>
+                    </div>
+                </Transition>
+                <TimedNotification
+                    :is-ready="isReadyBundled" 
+                    :duration="1500"
+                    container-class="text-sm text-gray-500 dark:text-gray-400"
+                > 
+                    Game list from bundle pre-loaded <span class="text-green-400">✓</span>
+                </TimedNotification>
+
+            </div>
+        </Transition>
+
         <!-- Search Bar -->
         <div class="mb-8">
             <div class="relative" ref="searchResultContainerRef">
-                <input v-model="searchQuery" type="text" placeholder="Search Discord Verified games..."
+               <div>
+                 <input v-model="searchQuery" type="text" placeholder="Search Discord Verified games..."
                     class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                     @focus="openSearchResults" @blur="handleSearchBlur" />
+
+                <!-- buttons to refetch game list -->
+                <button
+                    @click="fetchGameList()"
+                    class="absolute right-0 top-1/2 transform -translate-y-1/2 px-3 mr-2 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-white rounded-md">
+                    <span class="wrap whitespace-nowrap text-xs">
+                        Refetch Game List
+                    </span>
+                </button>   
+               </div>
                 <div v-if="searchResultsIsOpen" @click="isOnSearchResults = true"
                     class="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                     <div v-if="searchResults.length > 0">
-                        <div v-for="game in searchResults" :key="game.id"
+                        <div v-for="game in searchResults" :key="game.item.id"
                             class="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
                             <div class="flex justify-between items-center">
                                 <div>
-                                    <div class="font-medium text-gray-800 dark:text-white">{{ game.name }}</div>
-                                    <div class="text-sm text-gray-500 dark:text-gray-400">ID: {{ game.id }}</div>
+                                    <div class="font-medium text-gray-800 dark:text-white">
+                                        {{ game.item.name }}
+                                    </div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">ID: {{ game.item.id }}</div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400">
                                         Executables:
                                         <ul class="list-disc list-inside">
-                                            <li v-for="exe in game.executables" :key="exe.name"
+                                            <li v-for="exe in game.item.executables" :key="exe.name"
                                                 class="text-gray-500 dark:text-gray-400">
-                                                <span class="font-mono">{{ exe.name }} ({{ exe.os }})</span>
+                                                <span class="font-mono">
+                                                {{ exe.name }}
+                                                ({{ exe.os }})</span>
                                             </li>
                                         </ul>
                                     </div>
                                 </div>
-                                <button @click="addGameToList(game)"
+                                <button @click="addGameToList(game.item)"
                                     class="ml-2 px-3 py-1 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-md">
                                     Add game to list
                                 </button>
@@ -452,10 +618,10 @@ provide<GameActionsProvider>(GameActionsKey, {
             </div>
 
             <!-- Right Column: Game Actions (fixed position) -->
-            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow md:sticky md:top-4 self-start">
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow md:sticky md:top-4 self-start" :key="forceRerenderKey">
                 <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Game Actions</h2>
                 <div class="space-y-4">
-                    <div class="text-gray-500 dark:text-gray-400 mb-2 text-sm" v-if="!selectedGame">
+                    <div class="text-gray-500 dark:text-gray-400 mb-2 text-sm" v-if="!selectedGame || selectedGame === null">
                         Select a game from the left to perform actions.
                     </div>
                     

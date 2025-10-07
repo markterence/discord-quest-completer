@@ -2,9 +2,29 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
-    "opener:default"
+    "opener:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://markterence.github.io"
+        },
+        {
+          "url": "https://discord.com"
+        },
+        {
+          "url": "http://asset.localhost"
+        },
+        {
+          "url": " http://tauri.localhost"
+        }
+      ]
+    },
+    "dialog:default"
   ]
 }

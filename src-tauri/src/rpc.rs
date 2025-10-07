@@ -1,17 +1,17 @@
-pub use tokio;
 pub use discord_sdk as ds;
+pub use tokio;
 
 /// Application identifier for "Andy's Test App" used in the Discord SDK's
 /// examples.
 pub struct Client {
-    pub discord: ds::Discord, 
+    pub discord: ds::Discord,
     pub wheel: ds::wheel::Wheel,
     pub user: ds::user::User,
-} 
+}
 
-pub async fn make_client(app_id: ds::AppId , subs: ds::Subscriptions) -> Client {
+pub async fn make_client(app_id: ds::AppId, subs: ds::Subscriptions) -> Client {
     println!("Creating Discord client with app ID: {}", app_id);
-    let (wheel, handler) = ds::wheel::Wheel::new(Box::new(|err| { 
+    let (wheel, handler) = ds::wheel::Wheel::new(Box::new(|err| {
         println!("Error: {:?}", err);
     }));
 
@@ -29,8 +29,8 @@ pub async fn make_client(app_id: ds::AppId , subs: ds::Subscriptions) -> Client 
     println!("connected to Discord, local user is {:#?}", user);
 
     Client {
-        discord, 
+        discord,
         wheel,
-        user
+        user,
     }
 }

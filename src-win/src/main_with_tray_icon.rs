@@ -1,11 +1,11 @@
 #![windows_subsystem = "windows"] 
 
-use windows::Win32::Foundation::{COLORREF, HINSTANCE, HWND, LPARAM, LRESULT, RECT, SIZE, WPARAM};
+use windows::Win32::Foundation::{HWND, HINSTANCE, LPARAM, LRESULT, WPARAM, COLORREF, RECT};
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExA, DefWindowProcA, DispatchMessageA, GetClientRect, GetMessageA, GetWindowLongPtrA, PostQuitMessage, RegisterClassA, SetWindowLongPtrA, SetWindowPos, ShowWindow, TranslateMessage, CW_USEDEFAULT, GWL_EXSTYLE, HMENU, MSG, SWP_NOZORDER, SW_HIDE, SW_SHOWNOACTIVATE, SW_SHOWNORMAL, WINDOW_EX_STYLE, WINDOW_STYLE, WM_COMMAND, WM_CTLCOLORSTATIC, WM_DESTROY, WM_SIZE, WNDCLASSA, WS_CHILD, WS_EX_APPWINDOW, WS_EX_LAYERED, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_OVERLAPPEDWINDOW, WS_VISIBLE
+    CreateWindowExA, DefWindowProcA, DispatchMessageA, GetClientRect, GetMessageA, GetWindowLongPtrA, PostQuitMessage, RegisterClassA, SetWindowLongPtrA, SetWindowPos, ShowWindow, TranslateMessage, CW_USEDEFAULT, GWL_EXSTYLE, HMENU, IMAGE_ICON, LR_DEFAULTSIZE, MSG, SWP_NOZORDER, SW_HIDE, SW_SHOWNOACTIVATE, SW_SHOWNORMAL, WINDOW_EX_STYLE, WINDOW_STYLE, WM_COMMAND, WM_CTLCOLORSTATIC, WM_DESTROY, WM_SIZE, WNDCLASSA, WS_CHILD, WS_EX_APPWINDOW, WS_EX_LAYERED, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_OVERLAPPEDWINDOW, WS_VISIBLE
 };
 use windows::Win32::UI::Shell::ShellExecuteW;
-use windows::Win32::Graphics::Gdi::{GetDC, GetStockObject, GetTextExtentPoint32A, ReleaseDC, SetBkMode, HDC, NULL_BRUSH, TRANSPARENT};
+use windows::Win32::Graphics::Gdi::{HDC, SetBkMode, GetStockObject, NULL_BRUSH, TRANSPARENT};
 use windows::Win32::System::LibraryLoader::{GetModuleHandleA};
 use windows::core::{PCSTR};
 use std::ffi::CString;
@@ -17,6 +17,10 @@ use tray::create_tray_icon;
 const WIDTH: i32 = 400;
 const HEIGHT: i32 = 400;
 const LINK_BUTTON_ID: i32 = 1001;
+
+const CLASS_NAME: &str = "DiscordQuestCompleter\0";
+const STATIC_CLASS: &str = "STATIC\0";
+const BUTTON_CLASS: &str = "BUTTON\0";
 
 static mut TITLE_LABEL: Option<HWND> = None;
 static mut LINK_LABEL: Option<HWND> = None;
@@ -30,7 +34,7 @@ struct Config {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            title: "Discord Quest Completer".to_string(),
+            title: "Windows API".to_string(),
             start_minimized: false,
         }
     }
@@ -64,48 +68,20 @@ fn parse_args() -> Config {
     config
 }
 
-fn calculate_text_width(hwnd: HWND, text: &str) -> i32 {
+fn create_label(parent_hwnd: HWND, text: &str, instance: HINSTANCE) -> Option<HWND> {
     unsafe {
-        let hdc = GetDC(Some(hwnd));
-        if hdc.is_invalid() {
-            return 200; // fallback width
-        }
-        
-        let text_bytes = text.as_bytes();
-        let mut size = SIZE::default();
-        
-        let result = GetTextExtentPoint32A(
-            hdc,
-            text_bytes,
-            &mut size
-        );
-        
-        let _ = ReleaseDC(Some(hwnd), hdc);
-        
-        if result.as_bool() {
-            size.cx + 20 // Add 20px padding
-        } else {
-            200 // fallback width
-        }
-    }
-}
-
-
-fn create_label(parent_hwnd: HWND, text: &str, instance: HINSTANCE, x: i32, y:i32, w:Option<i32>, h:i32) -> Option<HWND> {
-    unsafe {
-        let class_name = CString::new("STATIC").ok()?;
+        let class_name = CString::new(STATIC_CLASS).ok()?;
         let window_text = CString::new(text).ok()?;
-         // Calculate width dynamically if not provided
-        let width = w.unwrap_or_else(|| calculate_text_width(parent_hwnd, text));
+        
         let label_hwnd: Result<HWND, windows::core::Error> = CreateWindowExA(
             WS_EX_TRANSPARENT, // Transparent background
             PCSTR(class_name.as_ptr() as *const u8), // Class name
             PCSTR(window_text.as_ptr() as *const u8), // Window text
             WS_CHILD | WS_VISIBLE, // Basic window style
-            x,  // x position
-            y,  // y position
-            width, // width
-            h,  // height
+            10,  // x position
+            10,  // y position  
+            180, // width
+            20,  // height
             Some(parent_hwnd), // Parent window
             None, // Menu
             Some(instance), // Instance handle
@@ -121,7 +97,7 @@ fn create_label(parent_hwnd: HWND, text: &str, instance: HINSTANCE, x: i32, y:i3
 
 fn create_link_label(parent_hwnd: HWND, text: &str, instance: HINSTANCE) -> Option<HWND> {
     unsafe {
-        let class_name = CString::new("BUTTON").ok()?;
+        let class_name = CString::new(BUTTON_CLASS).ok()?;
         let window_text = CString::new(text).ok()?;
         
         let label_hwnd = CreateWindowExA(
@@ -193,7 +169,7 @@ unsafe extern "system" fn window_proc(
         WM_COMMAND => { 
             let control_id = wparam.0 & 0xFFFF;
             if control_id == LINK_BUTTON_ID as usize { 
-                let url = windows::core::w!("https://github.com/markterence/discord-quest-completer");
+                let url = windows::core::w!("https://github.com/");
                 let operation = windows::core::w!("open");
                 let _ = ShellExecuteW(
                     None,
@@ -213,7 +189,7 @@ unsafe extern "system" fn window_proc(
 fn create_native_window(title: &str) -> Result<(HWND, HINSTANCE), Box<dyn std::error::Error>> {
     unsafe {
         let instance = GetModuleHandleA(None)?;
-        let class_name = CString::new("DiscordQuestCompleter")?;
+        let class_name = CString::new(CLASS_NAME)?;
         let window_title = CString::new(title)?;
 
         // Create a white background brush
@@ -258,16 +234,13 @@ fn main() {
     let tray_menu = tray_icon::menu::Menu::new();
     let quit_i = tray_icon::menu::MenuItem::new("Quit", true, None);
     let show_i = tray_icon::menu::MenuItem::new("Show", true, None);
-    let hide_i = tray_icon::menu::MenuItem::new("Hide", true, None);
 
     let _tray_menu = tray_menu.append_items(&[
         &show_i,
-        &hide_i,
-        &tray_icon::menu::PredefinedMenuItem::separator(),
         &quit_i
     ]);
 
-    let _tray = create_tray_icon(tray_menu, &config.title);
+    let _tray = create_tray_icon(tray_menu);
  
 
     // Create native Windows window
@@ -280,17 +253,8 @@ fn main() {
     };
     
     // Create a Windows label to display the title at the top
-    let title_label_hwnd = create_label(hwnd, &config.title, instance,10,  // x position
-            40,  // y position  
-           None,
-            20,  // height
-    );
-
-    let _app_label_hwnd = create_label(hwnd, "Discord Quest Completer", instance, 10, 10, None, 20);
+    let title_label_hwnd = create_label(hwnd, &config.title, instance);
     
-        let _app_label_hwnd = create_label(hwnd, "This program is part of the Discord Quest Completer", instance, 10, 60, None, 20);
-    
-
     // Create a link label anchored to the bottom-left
     let link_label_hwnd = create_link_label(hwnd, "Source on Github", instance);
     
@@ -326,26 +290,8 @@ fn main() {
                 }
 
                 if event.id == show_i.id() {
-                    // Always restore window styles for normal display when showing from tray
-                    let ex_style = GetWindowLongPtrA(hwnd, GWL_EXSTYLE);
-                    let new_ex_style = (ex_style & !(WS_EX_TOOLWINDOW.0 as isize | WS_EX_TRANSPARENT.0 as isize | WS_EX_LAYERED.0 as isize)) |
-                        WS_EX_APPWINDOW.0 as isize; // Restore WS_EX_APPWINDOW to show in taskbar
-                    
-                    SetWindowLongPtrA(hwnd, GWL_EXSTYLE, new_ex_style);
                     let _ = ShowWindow(hwnd, SW_SHOWNORMAL);
                     let _ = windows::Win32::UI::WindowsAndMessaging::SetForegroundWindow(hwnd);
-                }
-
-                if event.id == hide_i.id() {
-                    // Hide window to tray (similar to --tray startup behavior)
-                    let ex_style = GetWindowLongPtrA(hwnd, GWL_EXSTYLE);
-                    let new_ex_style = (ex_style & !WS_EX_APPWINDOW.0 as isize) |
-                        WS_EX_TOOLWINDOW.0 as isize | // Make the window a tool window (so it doesn't show in the taskbar)
-                        WS_EX_TRANSPARENT.0 as isize | // Make the window transparent
-                        WS_EX_LAYERED.0 as isize; // WS_EX_LAYERED make the window layered (for transparency)
-                    
-                    SetWindowLongPtrA(hwnd, GWL_EXSTYLE, new_ex_style);
-                    let _ = ShowWindow(hwnd, SW_HIDE);
                 }
             }
 
