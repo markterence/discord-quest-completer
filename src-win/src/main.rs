@@ -267,7 +267,7 @@ fn main() {
         &quit_i
     ]);
 
-    let _tray = create_tray_icon(tray_menu);
+    let _tray = create_tray_icon(tray_menu, &config.title);
  
 
     // Create native Windows window
@@ -288,6 +288,9 @@ fn main() {
 
     let _app_label_hwnd = create_label(hwnd, "Discord Quest Completer", instance, 10, 10, None, 20);
     
+        let _app_label_hwnd = create_label(hwnd, "This program is part of the Discord Quest Completer", instance, 10, 60, None, 20);
+    
+
     // Create a link label anchored to the bottom-left
     let link_label_hwnd = create_link_label(hwnd, "Source on Github", instance);
     
