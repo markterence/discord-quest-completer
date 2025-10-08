@@ -107,13 +107,13 @@ The reason for not having Linux and MacOS support right is that I want to make s
 
 For Linux, I don't know where to start yet. I will try to explore more of what to use and make sure the runner binary is small. It's also a pain (Wine, Proton, etc. How does discord detection work in linux. LMAO same for MacOS). Also the Microsoft Webview2 on Linux or through Wine is somehow problematic to install and get it running.
 
+---
+
 ## 🛠️ Tech Stack
 
 - 🦀 Rust
 - 🌐 Vue.js
 - 🧰 Tauri
-
----
 
 ## 🧑‍💻 Development Setup
 
@@ -176,7 +176,6 @@ rpc.setActivity({
 ```
 
 This may not be the intended use of Discord's RPC and may violate their terms of service. I am not entirely but if you can use other's AppID other than what you had/own in the Discord Developer Dashboard. Use this feature at your own risk.
-i
 
 ### Disclaimer
 
