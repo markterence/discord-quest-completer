@@ -5,7 +5,7 @@
 
 > Discord Quest Completer. I don't know what to call this, but there it is.
 
-A Windows desktop application for Discord Rich Presence and completing Discord Quest for games without needing to installation the full actual games/applications. Perfect for completing Discord Quests and showing off your gaming status without the storage burden.
+A Windows desktop application for Discord Rich Presence and completing Discord Quest for games without needing to install the full actual games/applications. Perfect for completing Discord Quests and showing off your gaming status without the storage burden.
 
 
 
@@ -59,10 +59,9 @@ folder-name/
 
 ## ✨ Features
 
-- Simulate playing verified Discord games without installation
+- Simulate playing verified Discord games without intalling a full game!
 - Complete Discord Quests requiring 15-minute gameplay (not yet tested for Stream the game Quests)
-- Accessible for users without high-end gaming PCs
-- Only Discord Verified games are supported
+- Only Discord Verified games are supported. The application fetches a list of games that Discord can automatically detect.
 
 ## ⚙️ How It Works
 
