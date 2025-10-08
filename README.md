@@ -38,7 +38,7 @@ https://github.com/user-attachments/assets/de904123-07df-41a9-8db1-ff05cc7ccc9b
 
 You can download manually pre-built pre-release binaries from the [Releases](https://github.com/markterence/discord-activity/releases) page.
 
-Alternatively, you can follow the [development setup instructions](#development-setup) to build the app from source.
+Alternatively, you can follow the [development setup instructions](#-development-setup) to build the app from source.
 
 ## Uninstall
 
@@ -123,7 +123,7 @@ For Linux, I don't know where to start yet. I will try to explore more of what t
 
 ### 📋 Requirements
 
-- Tauri - make sure the [pre-requisites](https://tauri.app/v1/guides/getting-started/prerequisites/) are installed such as Rust.
+- Tauri - make sure the [pre-requisites](https://tauri.app/start/prerequisites/) are installed such as Rust.
 - NodeJS - use any that is latest or node 20+
 - pnpm - project uses pnpm as package manager for the frontend.
 
