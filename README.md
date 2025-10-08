@@ -40,7 +40,7 @@ You can download manually pre-built pre-release binaries from the [Releases](htt
 
 Alternatively, you can follow the [development setup instructions](#development-setup) to build the app from source.
 
-## 🗑️ Uninstall
+## Uninstall
 
 To uninstall the app, simply go to the folder where you extracted the app and delete the contents folder.
 
@@ -99,7 +99,7 @@ When launched/played, the tiny executables trigger Discord's Rich Presence detec
 
 - Windows 11 (not tested on Windows 10 but it should work)
 
-## 🐧 Linux and 🍎 MacOS Support?
+### 🐧 Linux and 🍎 MacOS Support?
 
 Currently only Windows is supported. But I will try to add Linux support if I can. I don't have a MacOS machine to test on so MacOS support is not gonna happen.
 
