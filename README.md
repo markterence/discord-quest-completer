@@ -100,6 +100,8 @@ When launched/played, the tiny executables trigger Discord's Rich Presence detec
 
 ### 🐧 Linux and 🍎 MacOS Support?
 
+_TL;DR: Linux and macOS are not supported._
+
 Currently only Windows is supported. But I will try to add Linux support if I can. I don't have a MacOS machine to test on so MacOS support is not gonna happen.
 
 The reason for not having Linux and MacOS support right is that I want to make sure that the dummy game runner have minimal size like around 100KB or less for each platforms. For Windows on example, I used Rust and `windows` crate to use Win32 API to create a dummy window, this compiles to a small 136KB executable. I also tried a C# .net app which is fantastically small its only 7KB but can't make it to where Discord can detect it.
