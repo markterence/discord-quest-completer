@@ -165,7 +165,6 @@ See: [Discord Developer Docs – Creating an App](https://discord.com/developers
 
 For example, the App ID for Overwatch is `356875221078245376`, and we use it with something like [discordjs/rpc](https://github.com/discordjs/RPC).
 
----
 
 ```js
 // Set this to your Client ID.
