@@ -78,7 +78,7 @@ When launched/played, the tiny executables trigger Discord's Rich Presence detec
 
 ## 🚀 Planned Features and fixes
 
-- Make the "Stop" button work again if process was terminated outside of app's control. (It's already on version 2)
+- Make the "Stop" button work again if process was terminated outside of app's control.
 - Persist games that added on the list so it wont reset.
 - Discord Activity Simulator/playground (Customizable rich presence for developers and custom activities)
 - Set custom activity status from supported games
