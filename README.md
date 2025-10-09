@@ -155,26 +155,38 @@ pnpm tauri dev
 
 ### The Discord's RPC server and Rich Presence 
 
-There is also an experimental actions like Discord RPC functionality, it connects to Discord's RPC Gateway to send Activity updates for the selected game using its App ID even if the game is not running. (This may not work for sometime as Discord Updates their RPC and the SDK and syntax that I used on the Rust-code may not be updated as it is not one of the main features).
+There is also an experimental action like Discord RPC functionality along the selected game.
+It connects to Discord's RPC Gateway to send Activity updates for the selected game using its App ID, even if the game is not actually running. (This is Rich Presence only so Quests will not detect it)
 
-Though this is functional as it uses Discord Rich Presence, what happens is it uses the AppID and connects it to the RPC. See (https://discord.com/developers/docs/quick-start/getting-started#step-1-creating-an-app)
+(This may not work for some time, as Discord updates their RPC and SDK. The syntax I used in the Rust code may not be updated, as it is not one of the main focus of this app.)
 
-For example, the AppID for Overwatch is `356875221078245376` and we use it with something like [discordjs/rpc](https://github.com/discordjs/RPC)
+Though this is functional as it uses Discord Rich Presence, what happens is it uses the App ID of some App on Discord and connects it to the RPC.  
+See: [Discord Developer Docs – Creating an App](https://discord.com/developers/docs/quick-start/getting-started#step-1-creating-an-app)
+
+For example, the App ID for Overwatch is `356875221078245376`, and we use it with something like [discordjs/rpc](https://github.com/discordjs/RPC).
+
+---
 
 ```js
 // Set this to your Client ID.
-const clientId = '356875221078245376'; // But this is Overwatch's AppID on Discord. Not something I created
+const clientId = '356875221078245376'; // This is Overwatch's App ID on Discord, not one I created.
 DiscordRPC.register(clientId);
+
 const rpc = new DiscordRPC.Client({ transport: 'ipc' });
 const startTimestamp = new Date();
+
+// You will see "Verified Overwatch" on Discord Activity with custom details.
 rpc.setActivity({
   details: `Bleet bleet`,
   state: 'in bleet bleet party',
   startTimestamp,
-}); // You will see the Verified Overwatch on Discord Activity with custom details.
+});
 ```
 
-This may not be the intended use of Discord's RPC and may violate their terms of service. I am not entirely but if you can use other's AppID other than what you had/own in the Discord Developer Dashboard. Use this feature at your own risk.
+This may not be the intended use of Discord's RPC and may violate their Terms of Service.  
+I am not entirely sure if you can use others' App IDs other than the ones you own in the Discord Developer Dashboard for the application you are developing.
+Use this feature at your own risk.
+
 
 ### Disclaimer
 
