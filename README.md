@@ -102,11 +102,14 @@ When launched/played, the tiny executables trigger Discord's Rich Presence detec
 
 _TL;DR: Linux and macOS are not supported._
 
-Currently only Windows is supported. But I will try to add Linux support if I can. I don't have a MacOS machine to test on so MacOS support is not gonna happen.
+Currently, only Windows is supported. I will try to add Linux support if I can. I don't have a macOS machine to test on, so macOS support is not going to happen.
 
-The reason for not having Linux and MacOS support right is that I want to make sure that the dummy game runner have minimal size like around 100KB or less for each platforms. For Windows on example, I used Rust and `windows` crate to use Win32 API to create a dummy window, this compiles to a small 136KB executable. I also tried a C# .net app which is fantastically small its only 7KB but can't make it to where Discord can detect it.
+The reason for not having Linux and macOS support right now is that I want to make sure the dummy game runner has a minimal size — around 100KB or less for each platform.  
+For Windows, for example, I used Rust and the `windows` crate to access the Win32 API and create a dummy window. This compiles to a small 136KB executable.  
+I also tried a C# .NET app, which is fantastically small — only 7KB — but it may require the end-user to install the .NET 4.7 Runtime.
 
-For Linux, I don't know where to start yet. I will try to explore more of what to use and make sure the runner binary is small. It's also a pain (Wine, Proton, etc. How does discord detection work in linux. LMAO same for MacOS). Also the Microsoft Webview2 on Linux or through Wine is somehow problematic to install and get it running.
+For Linux, I don’t know where to start yet. I will try to explore more options to keep the runner binary small. It’s also a pain (Wine, Proton, etc. How does Discord detection even work on Linux? LMAO — same for macOS).  
+Additionally, if you are trying to run the windows build trough Wine in Linux, some of the dependencies such as Microsoft WebView2 somewhat problematic to install and get running.
 
 ---
 
