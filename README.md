@@ -1,4 +1,6 @@
-# Discord Quest Completer
+<p>
+  <h1 align="center">Discord Quest Completer</h1>
+</p>
 
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/markterence/discord-quest-completer/rust-check.yml?branch=main&style=flat&label=build%20artifacts)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/markterence/discord-quest-completer/build-release.yaml?branch=main&style=flat&label=build%20(release))
@@ -6,7 +8,6 @@
 > Discord Quest Completer. I don't know what to call this, but there it is.
 
 A Windows desktop application for Discord Rich Presence and completing Discord Quest for games without needing to install the full actual games/applications. Perfect for completing Discord Quests and showing off your gaming status without the storage burden.
-
 
 
 <!--
@@ -76,14 +77,13 @@ When launched/played, the tiny executables trigger Discord's Rich Presence detec
 - Save disk space while still participating in Discord's gaming ecosystem
 - Useful for users with limited internet bandwidth or storage space
 
-## 🚀 Planned Features and fixes
+<!-- ## 🚀 Planned Features and fixes
 
 - Make the "Stop" button work again if process was terminated outside of app's control.
 - Persist games that added on the list so it wont reset.
 - Discord Activity Simulator/playground (Customizable rich presence for developers and custom activities)
 - Set custom activity status from supported games
-- Linux and MacOS support (if possible)
-
+- Linux and MacOS support (if possible) -->
 
 ## :heart: Support :heart:
 
@@ -91,6 +91,10 @@ When launched/played, the tiny executables trigger Discord's Rich Presence detec
 [![GitHub][github-badge]][github-sponsors] - Become a Sponsor on GitHub. One time support, or a recurring donation
 
 [![Paypal][paypal-badge]][paypal] - One-time donation via PayPal
+
+<p align="center">
+  <img src="https://hoshizora.markterence.me/github-stargazers/markterence/discord-quest-completer?show_usernames=1" align="center" alt="stargazers"/>
+</p>
 
 ---
 
