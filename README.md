@@ -93,7 +93,7 @@ When launched/played, the tiny executables trigger Discord's Rich Presence detec
 [![Paypal][paypal-badge]][paypal] - One-time donation via PayPal
 
 <p align="center">
-  <img src="https://hoshizora.markterence.me/github-stargazers/markterence/discord-quest-completer?show_usernames=1" align="center" alt="stargazers"/>
+  <img src="https://hoshizora.markterence.me/github-stargazers/markterence/discord-quest-completer?show_usernames=1&v=1" align="center" alt="stargazers"/>
 </p>
 
 ---
