@@ -25,7 +25,7 @@ https://github.com/user-attachments/assets/de904123-07df-41a9-8db1-ff05cc7ccc9b
 
 ### Windows
 
-You can download manually pre-built pre-release binaries on the [Releases](https://github.com/markterence/discord-activity/releases) page.
+You can download manually pre-built release binaries on the [Releases](https://github.com/markterence/discord-activity/releases) page.
 
 Alternatively, you can follow the [development setup instructions](#-development-setup) to build the app from source.
 
