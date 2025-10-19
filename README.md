@@ -25,6 +25,10 @@ https://github.com/user-attachments/assets/de904123-07df-41a9-8db1-ff05cc7ccc9b
 
 ### Windows
 
+You can download manually pre-built pre-release binaries on the [Releases](https://github.com/markterence/discord-activity/releases) page.
+
+Alternatively, you can follow the [development setup instructions](#-development-setup) to build the app from source.
+
 > [!IMPORTANT]
 > Make sure you place or extract in a location where you have write or execute permissions.
 > 
@@ -37,10 +41,6 @@ https://github.com/user-attachments/assets/de904123-07df-41a9-8db1-ff05cc7ccc9b
 > If you don't have it installed, you can download it from [here](https://developer.microsoft.com/en-us/microsoft-edge/webview2).
 
 
-You can download manually pre-built pre-release binaries from the [Releases](https://github.com/markterence/discord-activity/releases) page.
-
-Alternatively, you can follow the [development setup instructions](#-development-setup) to build the app from source.
-
 ## Uninstall
 
 To uninstall the app, simply go to the folder where you extracted the app and delete the contents folder.
@@ -48,7 +48,7 @@ To uninstall the app, simply go to the folder where you extracted the app and de
 The content of the folder may look like this:
 
 ```text
-folder-name/
+discord-quest-completer/
 ├── discord-quest-completer.exe (main app)
 ├── data/ 
 │   ├── src-win.exe (runner dummy template)
@@ -68,13 +68,23 @@ folder-name/
 
 This app creates small executable files that mimic the actual game processes that Discord looks for when detecting a verified game to use it for it's Rich Presence activity. 
 
-When launched/played, the tiny executables trigger Discord's Rich Presence detection. (As of release build v2025.10.07 the dummy executable file size is 257kb)
+The executale files are placed in a created folder structure in the `games/` folder relative to the main application's exe.
 
-## 🛠️ Use Cases
+When launched/played, the tiny executables trigger Discord's Rich Presence/Registed Games detection. (As of release build v2025.10.07 the dummy executable file size is 257kb)
+
+> [!TIP]
+> After launching some games over a period of time, those files may accumulate. For a little maintenance, you can manually delete the created folders under the `games/` folder if you need to.
+
+<!--
+> _Currently, I am hesitant to add a file‑maintenance operation that deletes or clears the `games/` folder, because doing so may still cause unexpected issues. On Windows, the file system is case‑insensitive, so if you have a file named `Notes.txt` and you issue a command to delete `notes.txt`, Windows will still delete the `Notes.txt` file (the one that begins with a capital “N”)._
+-->
+
+## Use Cases
 
 - Complete Discord Quests without downloading massive game files
-- Show off playing the latest games to friends
-- Save disk space while still participating in Discord's gaming ecosystem
+- Show-off playing the latest games on your status if you want to. (Even if you don't really have it.) (LOL)
+- Save disk space while still participating in Discord's Quest.
+- I want to complete the Quest but I don't want to install the game's anti-cheat, game is too big, or it won't run on my PC.
 - Useful for users with limited internet bandwidth or storage space
 
 <!-- ## 🚀 Planned Features and fixes
@@ -143,7 +153,7 @@ Install dependencies for the Vue.js frontend using pnpm
 pnpm install
 ```
 
-Make sure to build and copy the dummy game binary from `src-win` and is added on tauri application's "resources" folder.
+Make sure to build and copy the dummy game binary from `src-win` and is add it on tauri application's "resources" folder.
 
 ```bash
 pnpm build:runner:win && pnpm copy:runner:win
