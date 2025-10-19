@@ -43,7 +43,7 @@ Alternatively, you can follow the [development setup instructions](#-development
 
 ## Uninstall
 
-To uninstall the app, simply go to the folder where you extracted the app and delete the contents folder.
+To uninstall the app, simply go to the folder where you extracted or placed the app and delete it's folder and thats it.
 
 The content of the folder may look like this:
 
@@ -55,6 +55,31 @@ discord-quest-completer/
 ├── games/
 │    ├── <game-id>/
 ```
+
+<!-- COMMENT:
+  This folder on local app data seems to only exists when using the installer or when Web API like local storage was used? 
+  Bring the section back once it's verified it was also existing using the quick portable builds.
+-->
+<!--
+**Other optional files to remove when uninstalling:**
+
+Delete the `me.markterence.discordquestcompleter` folder on `%localappdata%`. 
+
+```bash
+# Put this on File Explorer's address bar to navigate on the folder.
+%localappdata%/me.markterence.discordquestcompleter
+```
+
+The folder `%localappdata%/me.markterence.discordquestcompleter` contains the WebView2 files used by Tauri for the this app. The contents of the folder varies per-user but it may look this this:
+
+```
+EBWebView
+.cookies
+```
+
+
+> The `%localappdata%` is a system variable on Windows and is equivalent to `C:\Users\<YOUR USER>\AppData\Local\`.
+-->
 
 ---
 
