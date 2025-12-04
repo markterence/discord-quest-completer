@@ -6,6 +6,8 @@ on:
     paths:
       - '**/*.rs'
       - '**/Cargo.toml'
+  schedule:
+    - cron: "0 0 */2 * *"   # every 2 days at midnight
   workflow_dispatch:
   
 env:
@@ -100,7 +102,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tauri-win-release
-          # Bro exported the whole giga release folder of tauri
+          retention-days: 3
           # pick only the files we need for the release like the binary and the data folder
           # resource folders and installers.
           path: |
@@ -114,6 +116,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tauri-win-debug
+          retention-days: 3
           path: |
             src-tauri/target/debug/discord-quest-completer.exe
             src-tauri/target/debug/bundle/
@@ -165,6 +168,7 @@ jobs:
           win_build_debug_dir: ${{ env.win_build_debug_dir }}
         with:
           name: ${{ env.win_build_debug_dir }}.zip
+          retention-days: 3
           path: |
             ./build/${{ env.win_build_release_dir }}.zip
             
@@ -174,6 +178,7 @@ jobs:
           win_build_release_dir: ${{ env.win_build_release_dir }}
         with:
           name: ${{ env.win_build_release_dir }}.zip
+          retention-days: 3
           path: |
             ./build/${{ env.win_build_release_dir }}.zip
 
@@ -183,6 +188,7 @@ jobs:
           version: ${{ env.version }}
         with:
           name: bundle-debug-${{ env.version }}.zip
+          retention-days: 3
           path: |
             ./tauri-win-debug/bundle/**/*
 
@@ -192,5 +198,6 @@ jobs:
           version: ${{ env.version }}
         with:
           name: bundle-release-${{ env.version }}.zip
+          retention-days: 3
           path: |
             ./tauri-win-release/bundle/**/*            
