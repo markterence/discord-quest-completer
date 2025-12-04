@@ -91,14 +91,14 @@ EBWebView
 
 ## ⚙️ How It Works
 
-This app creates small executable files that mimic the actual game processes that Discord looks for when detecting a verified game to use it for it's Rich Presence activity. 
+This app creates small executable files that mimic the actual game processes that Discord looks for when detecting a verified game to use it for it's Rich Presence activity.
+When launched/played, the tiny executables trigger Discord's Rich Presence/Registed Games detection. Discord checks if Game exe name is running, sometimes it needs to be a folder where the game is supposed to be, thats how mainly it detects the Games, we can clearly see this on the "Registered Games" in the settings.
 
-The executale files are placed in a created folder structure in the `games/` folder relative to the main application's exe.
-
-When launched/played, the tiny executables trigger Discord's Rich Presence/Registed Games detection. (As of release build v2025.10.07 the dummy executable file size is 257kb)
+The dummy game executale files used by this program are placed in a folder called  `games/` folder relative to the main application's exe. As of release build v2025.10.07 the dummy executable file size is around 250kb, it could be smaller but it requires the end-users to install .NET Framework Runtime (which is sometimes comes pre-installed on an up-to-date Windows 11 PC's, so for now the dummy exe using WinAPI through C++ for compatibility rather than C#)
 
 > [!TIP]
 > After launching some games over a period of time, those files may accumulate. For a little maintenance, you can manually delete the created folders under the `games/` folder if you need to.
+
 
 <!--
 > _Currently, I am hesitant to add a file‑maintenance operation that deletes or clears the `games/` folder, because doing so may still cause unexpected issues. On Windows, the file system is case‑insensitive, so if you have a file named `Notes.txt` and you issue a command to delete `notes.txt`, Windows will still delete the `Notes.txt` file (the one that begins with a capital “N”)._
