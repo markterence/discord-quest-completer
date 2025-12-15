@@ -157,7 +157,7 @@ jobs:
           cp tauri-win-debug/discord-quest-completer.exe ./build/${{ env.win_build_debug_dir }}/
           cp -r tauri-win-debug/data/ ./build/${{ env.win_build_debug_dir }}/
           cp -r tauri-win-debug/resources/ ./build/${{ env.win_build_debug_dir }}/
-          zip -r ./build/${{ env.win_build_debug_dir }}.zip ./build/${{ env.win_build_debug_dir }}
+          # zip -r ./build/${{ env.win_build_debug_dir }}.zip ./build/${{ env.win_build_debug_dir }}
 
           echo "win_build_release_dir=${{ env.win_build_release_dir }}" >> $GITHUB_ENV
           echo "win_build_debug_dir=${{ env.win_build_debug_dir }}" >> $GITHUB_ENV
@@ -170,7 +170,7 @@ jobs:
           name: ${{ env.win_build_debug_dir }}.zip
           retention-days: 3
           path: |
-            ./build/${{ env.win_build_release_dir }}.zip
+            ./build/${{ env.win_build_release_dir }}
             
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@v4
