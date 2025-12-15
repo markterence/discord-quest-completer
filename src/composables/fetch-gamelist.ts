@@ -10,7 +10,11 @@ export function useFetchGameList() {
     const { addLog } = useGlobalState();
     async function fetchGameListGHMirror() {
         addLog('Fetching game list from GitHub mirror...'); 
-        const response = await invoke('fetch_gamelist_gh_mirror');
+        const response = await invoke('fetch_gamelist_gh_mirror').catch((err) => {
+            console.debug('fetchGameListGHMirror', err);
+            throw err;
+        });
+        console.debug('response', response)
         return response as Game[] | unknown[] | undefined;
     }
     async function fetchGameListFromDiscord (){
@@ -84,11 +88,14 @@ export function useFetchGameList() {
         addLog('Fetching game list...');
         // try fetching from the Github mirror first, then Discord. Use bundled as fallback.
         try {
-           await Promise.all([executeGH(), executeBundled()]);
-        } catch {
+           const res = await Promise.all([executeGH(), executeBundled()]);
+           console.debug('all', res)
+        } catch (e) {
             addLog('error', 'Error executing fetch for GitHub mirror or bundled game list.');
+            console.error(`fetch`, e);
         }
 
+        console.debug('errorGH', errorGH.value)
         if (errorGH.value) { 
             fetchError.value = 'Error fetching game list from GitHub mirror.';
             addLog('error','Error fetching game list from GitHub mirror');
