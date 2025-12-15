@@ -170,7 +170,7 @@ jobs:
           name: ${{ env.win_build_debug_dir }}.zip
           retention-days: 3
           path: |
-            ./build/${{ env.win_build_release_dir }}
+            ./build/${{ env.win_build_debug_dir }}
             
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@v4
