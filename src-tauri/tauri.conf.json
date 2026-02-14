@@ -40,8 +40,8 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": {
-      "resources/src-win.exe": "data/src-win.exe"
-    }
+    "resources": [
+      "resources/*"
+    ]
   }
 }
