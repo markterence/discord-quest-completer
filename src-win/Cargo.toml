@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tray-icon = { version = "0.11" }
+tray-icon = { version = "0.21.3" }
 
 [dependencies.windows]
 version = "0.62"
