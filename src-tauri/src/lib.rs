@@ -7,6 +7,7 @@ use tauri::{path::BaseDirectory, AppHandle, Emitter, Listener, Manager};
 
 mod rpc;
 mod runner;
+mod commands;
 
 // Global static instance of the Discord client
 static DISCORD_CLIENT: OnceCell<Mutex<Option<rpc::Client>>> = OnceCell::new();
@@ -198,21 +199,8 @@ fn connect_to_discord_rpc_3(handle: AppHandle, activity_json: String, action: St
     });
 }
 
-#[tauri::command(rename_all = "snake_case")]
-async fn fetch_gamelist_gh_mirror() -> Result<tauri::ipc::Response, String> {
-    let res = tauri_plugin_http::reqwest::get("https://markterence.github.io/discord-quest-completer/detectable.json").await.map_err(|err| err.to_string())?;
-    Ok(tauri::ipc::Response::new(res.text().await.unwrap()))
-}
-
-#[tauri::command(rename_all = "snake_case")]
-async fn fetch_gamelist_from_discord() -> tauri::ipc::Response {
-    let res = tauri_plugin_http::reqwest::get("https://discord.com/api/applications/detectable").await;
-    tauri::ipc::Response::new(res.unwrap().text().await.unwrap())
-}
-
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
+pub fn run() { 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
@@ -223,8 +211,8 @@ pub fn run() {
             stop_process,
             connect_to_discord_rpc_3,
             run_background_process,
-            fetch_gamelist_gh_mirror,
-            fetch_gamelist_from_discord
+            commands::api::fetch_gamelist_gh_mirror,
+            commands::api::fetch_gamelist_from_discord,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
