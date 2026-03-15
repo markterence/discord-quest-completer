@@ -17,6 +17,9 @@ import { UseFuseOptions } from '@vueuse/integrations';
 import Fuse from 'fuse.js';
 import { useGlobalState } from '@/composables/app-state';
 import TimedNotification from '@/components/TimedNotification.vue';
+import GameListErrorDialog from '@/components/error-dialog/GameListErrorDialog.vue';
+import { useErrorDialogQueue } from '@/composables/useErrorDialogQueue';
+import Dialog from '@/components/Dialog.vue';
 
 
 type DialogKey = 
@@ -39,6 +42,12 @@ const {
     allFetchDone,
 } = useFetchGameList()
 const { addLog } = useGlobalState();
+
+const { 
+    currentError: currentErrorOnQueue,
+    remove: removeErrorFromQueue,
+ } = useErrorDialogQueue();
+
 const shouldShowNotificationContainer = computed(() => {
     return isLoadingGH.value || isLoadingDiscord.value || isLoadingBundled.value ||
            (isReadyGH.value || isReadyDiscord.value || isReadyBundled.value);
@@ -386,6 +395,8 @@ provide<GameActionsProvider>(GameActionsKey, {
 
 <template>
     <div class="container mx-auto px-4 py-8">
+        <Dialog /> 
+
         <!-- Center dialog -->
         <dialog id="dialog" class="dialogStyle inset-0 bg-gray-800 bg-opacity-50
         border border-gray-300 dark:border-gray-600 rounded-lg
