@@ -54,7 +54,7 @@ const handleCancel = async () => {
 </template>
 <style scoped>
 .error-dialog {
-  background: white;
+  background: var(--bg-gray-800);
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   width: 500px;
