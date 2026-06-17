@@ -26,3 +26,4 @@ dist-ssr
 _target
 # Exclude binaries and executables these are built by the build process
 src-tauri/resources/*.exe
+src-tauri/resources/src-darwin

@@ -1,7 +1,8 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use once_cell::sync::OnceCell;
 use std::env;
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use tauri::{path::BaseDirectory, AppHandle, Emitter, Listener, Manager};
 
@@ -13,6 +14,116 @@ static DISCORD_CLIENT: OnceCell<Mutex<Option<rpc::Client>>> = OnceCell::new();
 
 fn get_discord_client() -> &'static Mutex<Option<rpc::Client>> {
     DISCORD_CLIENT.get_or_init(|| Mutex::new(None))
+}
+
+fn runner_resource_name() -> &'static str {
+    if cfg!(target_os = "macos") {
+        "data/src-darwin"
+    } else {
+        "data/src-win.exe"
+    }
+}
+
+fn is_app_bundle(executable_name: &str) -> bool {
+    cfg!(target_os = "macos") && executable_name.ends_with(".app")
+}
+
+fn bundle_binary_name(app_name: &str) -> String {
+    app_name
+        .strip_suffix(".app")
+        .unwrap_or(app_name)
+        .to_string()
+}
+
+fn game_folder_path(exe_dir: &Path, path: &str, app_id: i64) -> PathBuf {
+    let normalized_path = Path::new(path).to_string_lossy().to_string();
+
+    exe_dir
+        .join("games")
+        .join(app_id.to_string())
+        .join(normalized_path)
+}
+
+fn resolve_runner_template(handle: &AppHandle) -> Result<PathBuf, String> {
+    handle
+        .path()
+        .resolve(runner_resource_name(), BaseDirectory::Resource)
+        .map_err(|e| format!("Failed to resolve runner template: {}", e))
+}
+
+fn make_macos_app_bundle(
+    app_bundle_path: &Path,
+    app_name: &str,
+    display_name: &str,
+    runner_template: &Path,
+) -> Result<PathBuf, String> {
+    let binary_name = bundle_binary_name(app_name);
+    let macos_dir = app_bundle_path.join("Contents/MacOS");
+    fs::create_dir_all(&macos_dir)
+        .map_err(|e| format!("Failed to create app bundle directories: {}", e))?;
+
+    let target_executable_path = macos_dir.join(&binary_name);
+    fs::copy(runner_template, &target_executable_path)
+        .map_err(|e| format!("Failed to copy dummy executable: {}", e))?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut permissions = fs::metadata(&target_executable_path)
+            .map_err(|e| format!("Failed to read executable permissions: {}", e))?
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&target_executable_path, permissions)
+            .map_err(|e| format!("Failed to set executable permissions: {}", e))?;
+    }
+
+    let info_plist = format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>{display_name}</string>
+    <key>CFBundleExecutable</key>
+    <string>{binary_name}</string>
+    <key>CFBundleIdentifier</key>
+    <string>me.markterence.discordquestcompleter.dummy</string>
+    <key>CFBundleName</key>
+    <string>{display_name}</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+</dict>
+</plist>
+"#
+    );
+
+    fs::write(app_bundle_path.join("Contents/Info.plist"), info_plist)
+        .map_err(|e| format!("Failed to write Info.plist: {}", e))?;
+
+    Ok(target_executable_path)
+}
+
+fn launch_executable_path(game_folder_path: &Path, executable_name: &str) -> PathBuf {
+    if is_app_bundle(executable_name) {
+        game_folder_path
+            .join(executable_name)
+            .join("Contents/MacOS")
+            .join(bundle_binary_name(executable_name))
+    } else {
+        game_folder_path.join(executable_name)
+    }
+}
+
+fn stop_process_name(exec_name: &str) -> String {
+    if is_app_bundle(exec_name) {
+        bundle_binary_name(exec_name)
+    } else {
+        exec_name.to_string()
+    }
 }
 
 #[tauri::command]
@@ -27,18 +138,14 @@ async fn create_fake_game(
     executable_name: &str,
     path_len: i64,
     app_id: i64,
+    display_name: Option<String>,
 ) -> Result<String, String> {
     // Must create in the same directory as the executable to avoid permission issues
     // Get the executable directory to look for config file
     let exe_path: std::path::PathBuf = env::current_exe().unwrap_or_default();
     let exe_dir = exe_path.parent().unwrap_or_else(|| Path::new(""));
 
-    let normalized_path = Path::new(path).to_string_lossy().to_string();
-
-    let game_folder_path = exe_dir
-        .join("games")
-        .join(app_id.to_string())
-        .join(normalized_path);
+    let game_folder_path = game_folder_path(exe_dir, path, app_id);
 
     println!("Game folder path: {:?}", game_folder_path);
     println!(
@@ -46,30 +153,72 @@ async fn create_fake_game(
         game_folder_path.join(executable_name)
     );
 
-    // Ok(format!("Dummy executable copied to: {:?}", target_executable_path))
-    match std::fs::create_dir_all(&game_folder_path) {
+    match fs::create_dir_all(&game_folder_path) {
         Ok(_) => {
             println!("Successfully created directory: {:?}", game_folder_path);
         }
         Err(e) => return Err(format!("Failed to create game folder: {}", e)),
     };
-    // copy the dummy executable to the created folder
-    // there is a `template.exe` file along the final build.
-    let resource_path = handle
-        .path()
-        .resolve("data/src-win.exe", BaseDirectory::Resource)
-        .unwrap_or_default();
 
-    println!("Creating dummy game executable: {:?}", resource_path);
-    let dummy_executable_path = exe_dir.join("template.exe");
-    let target_executable_path = game_folder_path.join(executable_name);
-    match std::fs::copy(&resource_path, &target_executable_path) {
-        Ok(_) => Ok(format!(
-            "Dummy executable copied to: {:?}",
+    let resource_path = resolve_runner_template(&handle)?;
+    println!("Creating dummy game executable from: {:?}", resource_path);
+
+    if is_app_bundle(executable_name) {
+        let app_bundle_path = game_folder_path.join(executable_name);
+        let bundle_display_name = display_name
+            .filter(|name| !name.is_empty())
+            .unwrap_or_else(|| bundle_binary_name(executable_name));
+        let target_executable_path = make_macos_app_bundle(
+            &app_bundle_path,
+            executable_name,
+            &bundle_display_name,
+            &resource_path,
+        )?;
+        return Ok(format!(
+            "Dummy app bundle created at: {:?}",
             target_executable_path
-        )),
+        ));
+    }
+
+    let target_executable_path = game_folder_path.join(executable_name);
+    match fs::copy(&resource_path, &target_executable_path) {
+        Ok(_) => {
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                if let Ok(metadata) = fs::metadata(&target_executable_path) {
+                    let mut permissions = metadata.permissions();
+                    permissions.set_mode(0o755);
+                    let _ = fs::set_permissions(&target_executable_path, permissions);
+                }
+            }
+
+            Ok(format!(
+                "Dummy executable copied to: {:?}",
+                target_executable_path
+            ))
+        }
         Err(e) => Err(format!("Failed to copy dummy executable: {}", e)),
     }
+}
+
+#[cfg(target_os = "macos")]
+fn launch_macos_app_bundle(app_bundle_path: &Path, title: &str) -> Result<(), String> {
+    let mut command = std::process::Command::new("open");
+    command
+        .arg("-n")
+        .arg("-g")
+        .arg("-a")
+        .arg(app_bundle_path)
+        .arg("--args")
+        .arg("--title")
+        .arg(title);
+
+    command
+        .spawn()
+        .map_err(|e| format!("Failed to launch app bundle with open: {}", e))?;
+
+    Ok(())
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -83,18 +232,28 @@ async fn run_background_process(
     let exe_path = env::current_exe().unwrap_or_default();
     let exe_dir = exe_path.parent().unwrap_or_else(|| Path::new(""));
 
-    let normalized_path = Path::new(path).to_string_lossy().to_string();
+    let game_folder_path = game_folder_path(exe_dir, path, app_id);
 
-    let game_folder_path = exe_dir
-        .join("games")
-        .join(app_id.to_string())
-        .join(normalized_path);
-    let executable_path = game_folder_path.join(executable_name);
-    // const DETACHED_PROCESS: u32 = 0x00000008;
-    // const CREATE_NO_WINDOW: u32 = 0x08000000; // Hide the window
+    if is_app_bundle(executable_name) {
+        #[cfg(target_os = "macos")]
+        {
+            let bundle_path = game_folder_path.join(executable_name);
+            launch_macos_app_bundle(&bundle_path, name)?;
+            return Ok("App bundle launched successfully".to_string());
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            let _ = name;
+            return Err("App bundle launches are only supported on macOS".to_string());
+        }
+    }
+
+    let executable_path = launch_executable_path(&game_folder_path, executable_name);
+
     match std::process::Command::new(&executable_path)
         .args(["--title", name])
-        .current_dir(game_folder_path) // Set working directory to the game folder
+        .current_dir(&game_folder_path)
         .spawn()
     {
         Ok(_) => Ok("Process started successfully".to_string()),
@@ -104,21 +263,62 @@ async fn run_background_process(
 
 #[tauri::command(rename_all = "snake_case")]
 async fn stop_process(exec_name: String) -> Result<(), String> {
-    // Stop the process using taskkill command
-    let output = std::process::Command::new("taskkill")
-        .arg("/F")
-        .arg("/IM")
-        .arg(exec_name)
-        .output()
-        .map_err(|e| format!("Failed to execute taskkill: {}", e))?;
+    let process_name = stop_process_name(&exec_name);
 
-    if output.status.success() {
-        Ok(())
-    } else {
-        Err(format!(
-            "Failed to stop process: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ))
+    #[cfg(target_os = "windows")]
+    {
+        let output = std::process::Command::new("taskkill")
+            .arg("/F")
+            .arg("/IM")
+            .arg(&process_name)
+            .output()
+            .map_err(|e| format!("Failed to execute taskkill: {}", e))?;
+
+        if output.status.success() {
+            Ok(())
+        } else {
+            Err(format!(
+                "Failed to stop process: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ))
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        if is_app_bundle(&exec_name) {
+            let bundle_pattern = format!("{}/Contents/MacOS", exec_name);
+            let output = std::process::Command::new("pkill")
+                .arg("-f")
+                .arg(&bundle_pattern)
+                .output()
+                .map_err(|e| format!("Failed to execute pkill: {}", e))?;
+
+            if output.status.success() {
+                return Ok(());
+            }
+        }
+
+        let output = std::process::Command::new("pkill")
+            .arg("-x")
+            .arg(&process_name)
+            .output()
+            .map_err(|e| format!("Failed to execute pkill: {}", e))?;
+
+        if output.status.success() {
+            Ok(())
+        } else {
+            Err(format!(
+                "Failed to stop process: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ))
+        }
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        let _ = process_name;
+        Err("Stopping processes is not supported on this platform".to_string())
     }
 }
 
@@ -209,7 +409,6 @@ async fn fetch_gamelist_from_discord() -> tauri::ipc::Response {
     let res = tauri_plugin_http::reqwest::get("https://discord.com/api/applications/detectable").await;
     tauri::ipc::Response::new(res.unwrap().text().await.unwrap())
 }
-
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

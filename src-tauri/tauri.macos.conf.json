@@ -1,0 +1,7 @@
+{
+  "bundle": {
+    "resources": {
+      "resources/src-darwin": "data/src-darwin"
+    }
+  }
+}
