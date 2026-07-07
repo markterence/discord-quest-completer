@@ -185,6 +185,7 @@ export function useFetchGameList() {
         // Set a timeout to delay setting allFetchDone to true, to allow UI to update.
         timeoutId = setTimeout(() => {
             allFetchDone.value = true;
+
         }, 1800);
 
     }
@@ -198,7 +199,6 @@ export function useFetchGameList() {
     tryOnMounted(async () => {
         await fetchGameList();
     });
-
 
     return {
         gameListGHMirror,
