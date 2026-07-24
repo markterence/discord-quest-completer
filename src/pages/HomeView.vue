@@ -126,12 +126,33 @@ function openSearchResults() {
     searchResultsIsOpen.value = true;
 }
 
+// Generate a fallback executable name from game name
+// e.g. "Shift at Midnight" → "ShiftAtMidnight.exe"
+function generateFallbackExecutable(game: Game): GameExecutable {
+    const sanitized = game.name
+        .replace(/[^a-zA-Z0-9\s]/g, '') // remove special chars
+        .split(/\s+/)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join('');
+    const exeName = `${sanitized}.exe`;
+    return {
+        name: exeName,
+        os: 'win32',
+        is_launcher: false,
+    };
+}
+
 // Function to add a game to the selected list
 function addGameToList(game: Game) {
     if (!gameList.value.some(g => g.id === game.id)) {
+        // Inject fallback executable if game has no executables
+        const executables = (!game.executables || game.executables.length === 0)
+            ? [generateFallbackExecutable(game)]
+            : game.executables;
         gameList.value.push({
             uid: randomString(),
-            ...game
+            ...game,
+            executables,
         });
     }
 
@@ -242,6 +263,20 @@ async function playGame({game, executable}: {game: Game, executable: GameExecuta
         const gameToPlay = gameList.value.find(g => g.uid === gameUid);
         const executableItem = gameToPlay?.executables.find(exe => exe.name === executable.name);
         if (gameToPlay && executableItem) {
+            // Check if game has Steam SKU and create manifest if available
+            const steamSku = (game as any).third_party_skus?.find((s: any) => s.distributor === 'steam');
+            if (steamSku && steamSku.id) {
+                try {
+                    await invoke('create_steam_appmanifest', {
+                        steam_appid: String(steamSku.id),
+                        name: game.name,
+                    });
+                    addLog('info', `Created Steam AppManifest for ${game.name} (AppID: ${steamSku.id})`);
+                } catch (e) {
+                    console.warn('Failed to create Steam manifest:', e);
+                }
+            }
+
             const payload =  { 
                 name: game.name,
                 path: executable.path,

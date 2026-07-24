@@ -103,6 +103,62 @@ async fn run_background_process(
 }
 
 #[tauri::command(rename_all = "snake_case")]
+async fn create_steam_appmanifest(
+    steam_appid: &str,
+    name: &str,
+) -> Result<String, String> {
+    let mut possible_paths = Vec::new();
+
+    if let Ok(program_files_x86) = env::var("ProgramFiles(x86)") {
+        possible_paths.push(std::path::PathBuf::from(program_files_x86).join("Steam").join("steamapps"));
+    }
+    if let Ok(program_files) = env::var("ProgramFiles") {
+        possible_paths.push(std::path::PathBuf::from(program_files).join("Steam").join("steamapps"));
+    }
+    possible_paths.push(std::path::PathBuf::from("C:\\Program Files (x86)\\Steam\\steamapps"));
+    possible_paths.push(std::path::PathBuf::from("C:\\Steam\\steamapps"));
+    possible_paths.push(std::path::PathBuf::from("D:\\Steam\\steamapps"));
+    possible_paths.push(std::path::PathBuf::from("E:\\Steam\\steamapps"));
+
+    let content = format!(
+        r#""AppState"
+{{
+	"appid"		"{}"
+	"Universe"		"1"
+	"name"		"{}"
+	"StateFlags"		"4"
+	"installdir"		"{}"
+}}
+"#,
+        steam_appid, name, name
+    );
+
+    let mut created = false;
+    let mut last_err = String::new();
+
+    for path in possible_paths {
+        if path.exists() {
+            let manifest_path = path.join(format!("appmanifest_{}.acf", steam_appid));
+            match std::fs::write(&manifest_path, &content) {
+                Ok(_) => {
+                    created = true;
+                    println!("Successfully created Steam manifest: {:?}", manifest_path);
+                }
+                Err(e) => {
+                    last_err = e.to_string();
+                }
+            }
+        }
+    }
+
+    if created {
+        Ok("Steam manifest created successfully".to_string())
+    } else {
+        Err(format!("Could not create Steam manifest file. Error: {}", last_err))
+    }
+}
+
+#[tauri::command(rename_all = "snake_case")]
 async fn stop_process(exec_name: String) -> Result<(), String> {
     // Stop the process using taskkill command
     let output = std::process::Command::new("taskkill")
@@ -224,7 +280,8 @@ pub fn run() {
             connect_to_discord_rpc_3,
             run_background_process,
             fetch_gamelist_gh_mirror,
-            fetch_gamelist_from_discord
+            fetch_gamelist_from_discord,
+            create_steam_appmanifest
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

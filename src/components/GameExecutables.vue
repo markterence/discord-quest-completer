@@ -1,7 +1,25 @@
 <template>
     <div class="text-gray-500 dark:text-gray-400">
-        <h3>
+        <!-- Fallback notice when game had no original executables -->
+        <div v-if="isFallbackMode" class="mb-3 p-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <div class="flex items-center gap-1.5 text-amber-400 text-xs font-medium mb-1">
+                <span>⚠</span>
+                <span>Auto-generated executable</span>
+            </div>
+            <p class="text-xs text-gray-400">
+                This game has no executables in Discord's database. A fallback executable was auto-generated.
+                You can also try the <strong>Test RPC</strong> button above for better quest tracking.
+            </p>
+        </div>
+
+        <h3 v-if="filteredExecutables.length > 1">
             The game has multiple platform executables. Please select one to launch:
+        </h3>
+        <h3 v-else-if="filteredExecutables.length === 1">
+            Select the executable to launch:
+        </h3>
+        <h3 v-else>
+            No compatible executables found for this platform.
         </h3>
 
         <div class="text-xs mt-2">
@@ -58,6 +76,20 @@ const emit = defineEmits<{
 }>();
 
 const gameActions = inject<GameActionsProvider>(GameActionsKey);
+
+// Detect if this game is using a fallback (auto-generated) executable
+const isFallbackMode = computed(() => {
+    // A fallback executable has a name that ends with .exe and matches
+    // the PascalCase version of the game name
+    const exes = props.game.executables;
+    if (!exes || exes.length === 0) return true;
+    if (exes.length === 1) {
+        const name = exes[0].name;
+        // Check if it looks auto-generated (PascalCase with no path separators)
+        return !name.includes('/') && !name.includes('\\') && /^[A-Z][a-zA-Z0-9]+\.exe$/.test(name);
+    }
+    return false;
+});
 
 const filteredExecutables = computed(() => {
     return props.game.executables.filter(executable => {
