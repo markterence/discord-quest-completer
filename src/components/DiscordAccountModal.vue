@@ -31,31 +31,31 @@
           <!-- Main System Browser Login Action -->
           <div class="text-center p-4 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-xl space-y-3">
             <p class="text-xs text-gray-600 dark:text-gray-300">
-              Open Discord in your <strong>default system browser (Chrome/Edge/Firefox)</strong> for maximum trust & security.
+              Mở Discord trên trình duyệt hệ thống. <em>(Lưu ý: Nếu trình duyệt của bạn đã đăng nhập sẵn, Discord sẽ tự động vào thẳng trang cá nhân)</em>.
             </p>
 
             <div class="flex flex-col gap-2">
               <button
-                @click="openDefaultBrowser('https://discord.com/login')"
+                @click="openDefaultBrowser('https://discord.com/app')"
                 class="w-full py-2.5 px-4 bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold text-xs rounded-lg shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span class="text-base">🌐</span>
-                <span>Open Discord in System Browser (Chrome / Edge)</span>
+                <span>Mở Discord trên Trình duyệt Hệ thống (Chrome / Edge)</span>
               </button>
 
               <button
                 @click="openLoginWindow"
                 :disabled="isLoading"
-                class="w-full py-2 px-4 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-medium text-xs rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                class="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span v-if="isLoading" class="animate-spin">🌀</span>
                 <span class="text-sm">🪟</span>
-                <span>{{ isLoading ? 'Waiting for Login...' : 'Or Open Webview Popup (Auto-Capture)' }}</span>
+                <span>{{ isLoading ? 'Đang đợi đăng nhập...' : 'Mở Cửa sổ Webview Auto-Capture (Tự động bắt Token)' }}</span>
               </button>
             </div>
 
             <p v-if="token" class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              ✓ Session Token active
+              ✓ Đã có Session Token & Quest Active
             </p>
           </div>
 
