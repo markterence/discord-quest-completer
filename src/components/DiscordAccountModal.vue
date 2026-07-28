@@ -51,26 +51,17 @@
 
             <div v-else class="flex flex-col gap-2.5">
               <p class="text-xs text-gray-600 dark:text-gray-300">
-                Đăng nhập tài khoản Discord bằng Cửa sổ Trình duyệt Web (hỗ trợ Mật khẩu, 2FA & QR Code). Phiên đăng nhập sẽ được lưu tự động!
+                Tự động đồng bộ tài khoản và danh sách Quest từ phần mềm <strong>Discord Desktop App</strong> đang mở trên máy tính của bạn.
               </p>
-
-              <button
-                @click="openLoginWindow"
-                :disabled="isLoading"
-                class="w-full py-3 px-4 bg-[#5865F2] hover:bg-[#4752C4] disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span v-if="isLoading" class="animate-spin">🌀</span>
-                <span class="text-base">🌐</span>
-                <span>{{ isLoading ? 'Đang đợi đăng nhập...' : 'Đăng nhập tài khoản Discord (Web Window)' }}</span>
-              </button>
 
               <button
                 @click="autoDetectLocalToken"
                 :disabled="isLoading"
-                class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-xs rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                class="w-full py-3 px-4 bg-[#5865F2] hover:bg-[#4752C4] disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span class="text-sm">⚡</span>
-                <span>Hoặc Nhận diện tự động phiên Discord trên máy</span>
+                <span v-if="isLoading" class="animate-spin">🌀</span>
+                <span class="text-base">⚡</span>
+                <span>{{ isLoading ? 'Đang nhận diện tài khoản...' : 'Đồng bộ từ Discord Desktop App' }}</span>
               </button>
             </div>
           </div>
@@ -186,7 +177,7 @@ function close() {
 function handleLogout() {
   setToken('');
   quests.value = [];
-  openLoginWindow();
+  autoDetectLocalToken();
 }
 
 function emitSync() {

