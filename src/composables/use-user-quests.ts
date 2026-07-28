@@ -33,6 +33,47 @@ export function getQuestGameTitle(q: any): string {
   );
 }
 
+export function isPlayableWindowsGameQuest(q: any): boolean {
+  if (!q || !q.config) return false;
+  
+  // 1. Must have an application ID (game app)
+  const appId = getQuestAppId(q);
+  if (!appId) return false;
+
+  // 2. Filter out completed or claimed quests
+  const status = q.user_status;
+  if (status?.completed_at || status?.claimed_at) return false;
+
+  // 3. Filter out expired quests
+  if (q.config?.expires_at) {
+    const expiryDate = new Date(q.config.expires_at);
+    if (!isNaN(expiryDate.getTime()) && expiryDate <= new Date()) {
+      return false;
+    }
+  }
+
+  // 4. Filter out video / stream watch quests (only playable games on Windows)
+  const questName = (q.config?.messages?.quest_name || q.config?.title || '').toLowerCase();
+  const taskType = String(q.config?.task_config?.task_type || q.config?.task_type || '').toUpperCase();
+  const tasksObj = q.config?.task_config?.tasks || {};
+
+  if (taskType.includes('VIDEO') || taskType.includes('WATCH') || taskType.includes('STREAM_WATCH')) {
+    return false;
+  }
+  
+  if (tasksObj['WATCH_VIDEO'] || tasksObj['WATCH_STREAM']) {
+    return false;
+  }
+
+  if (questName.includes('watch') || questName.includes('video') || questName.includes('episode') || questName.includes('stream')) {
+    if (!tasksObj['PLAY_ON_DESKTOP'] && !tasksObj['PLAY_ON_DESKTOP_V2']) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 const TOKEN_STORAGE_KEY = 'discord_user_token_v1';
 const isAccountModalOpen = ref(false);
 const userProfile = ref<DiscordUserProfile | null>(null);
@@ -45,10 +86,6 @@ export function useUserQuests() {
   const errorMessage = ref<string | null>(null);
 
   const avatarUrl = computed(() => {
-    if (!userProfile.value) return '';
-    if (userProfile.value.avatar) {
-      return `https://cdn.discordapp.com/avatars/${userProfile.value.id}/${userProfile.value.avatar}.png`;
-    }
     return `https://cdn.discordapp.com/embed/avatars/0.png`;
   });
 
@@ -132,25 +169,11 @@ export function useUserQuests() {
 
 
 
-  // Filter quests that are NOT completed yet and NOT expired
-  const activeUnfinishedQuests = computed(() => {
-    const now = new Date();
-    return quests.value.filter((q: any) => {
-      const appId = getQuestAppId(q);
-      if (!appId) return false;
-      const status = q.user_status;
-      // If completed_at is present or claimed_at, skip
-      if (status?.completed_at || status?.claimed_at) return false;
 
-      // Check expiry date if present in quest config
-      if (q.config?.expires_at) {
-        const expiryDate = new Date(q.config.expires_at);
-        if (!isNaN(expiryDate.getTime()) && expiryDate <= now) {
-          return false; // Quest has expired, skip
-        }
-      }
-      return true;
-    });
+
+  // Filter quests that are playable Windows games, NOT completed yet, and NOT expired
+  const activeUnfinishedQuests = computed(() => {
+    return quests.value.filter((q: any) => isPlayableWindowsGameQuest(q));
   });
 
   // Extract application_ids of games to auto-add

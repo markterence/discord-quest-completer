@@ -455,6 +455,7 @@ const {
     token,
     autoDetectLocalToken,
     fetchQuests,
+    quests,
     activeUnfinishedQuests,
     unfinishedGameAppIds
 } = useUserQuests();
@@ -489,6 +490,97 @@ watch([activeUnfinishedQuests, gameDB], ([newQuests]) => {
 async function handleRefetchGameList() {
     await fetchGameList();
     await autoSyncUserQuests();
+}
+
+const isAutoSequenceRunning = ref(false);
+const autoSequenceIndex = ref(0);
+let autoSequenceInterval: any = null;
+
+async function toggleAutoSequence() {
+    if (isAutoSequenceRunning.value) {
+        stopAutoSequence();
+    } else {
+        await startAutoSequence();
+    }
+}
+
+async function startAutoSequence() {
+    if (gameList.value.length === 0) {
+        addLog('info', 'No games in list to run sequentially.');
+        return;
+    }
+    isAutoSequenceRunning.value = true;
+    autoSequenceIndex.value = 0;
+    addLog('info', '🚀 Started Auto-Sequence Execution for all quest games!');
+    await playCurrentSequenceGame();
+    
+    // Start tracking progress every 20 seconds
+    if (autoSequenceInterval) clearInterval(autoSequenceInterval);
+    autoSequenceInterval = setInterval(trackAndProgressSequence, 20000);
+}
+
+function stopAutoSequence() {
+    isAutoSequenceRunning.value = false;
+    if (autoSequenceInterval) {
+        clearInterval(autoSequenceInterval);
+        autoSequenceInterval = null;
+    }
+    addLog('info', '⏹️ Stopped Auto-Sequence Execution.');
+}
+
+async function playCurrentSequenceGame() {
+    if (!isAutoSequenceRunning.value) return;
+    if (gameList.value.length === 0 || autoSequenceIndex.value >= gameList.value.length) {
+        addLog('info', '🎉 All quest games in list completed!');
+        stopAutoSequence();
+        return;
+    }
+    const currentGame = gameList.value[autoSequenceIndex.value];
+    selectedGameId.value = currentGame.uid;
+    addLog('info', `🎮 [Auto-Sequence] Playing game ${autoSequenceIndex.value + 1}/${gameList.value.length}: ${currentGame.name}`);
+    if (currentGame.executables && currentGame.executables.length > 0) {
+        await playGame({ game: currentGame, executable: currentGame.executables[0] });
+    }
+}
+
+async function trackAndProgressSequence() {
+    if (!isAutoSequenceRunning.value || gameList.value.length === 0) return;
+    
+    // Fetch latest quests status from Discord API
+    await fetchQuests();
+    
+    const currentGame = gameList.value[autoSequenceIndex.value];
+    if (!currentGame) return;
+
+    // Check if the quest for currentGame is finished
+    const currentQuest = quests.value.find((q: any) => String(getQuestAppId(q)) === String(currentGame.id));
+    
+    const isFinished = !currentQuest || 
+        Boolean(currentQuest.user_status?.completed_at || currentQuest.user_status?.claimed_at);
+
+    if (isFinished) {
+        addLog('info', `✅ Quest for ${currentGame.name} COMPLETED! Auto-removing game...`);
+        
+        // Stop process for current game
+        if (currentGame.executables && currentGame.executables.length > 0) {
+            await stopPlaying({ game: currentGame, executable: currentGame.executables[0] });
+        }
+        
+        // Remove game from list
+        removeGameFromList(currentGame);
+        
+        if (gameList.value.length > 0) {
+            if (autoSequenceIndex.value >= gameList.value.length) {
+                autoSequenceIndex.value = 0;
+            }
+            await playCurrentSequenceGame();
+        } else {
+            addLog('info', '🏆 All active quests completed successfully!');
+            stopAutoSequence();
+        }
+    } else {
+        addLog('info', `⏳ [Auto-Sequence] Quest for ${currentGame.name} in progress...`);
+    }
 }
 
 provide<GameActionsProvider>(GameActionsKey, {
@@ -690,9 +782,21 @@ provide<GameActionsProvider>(GameActionsKey, {
             <!-- Left Column: Selected Games (scrollable) -->
             <!--  max-h-[70vh] overflow-y-auto : add these somewhere to just scroll the content  -->
             <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                <h2
-                    class="text-xl font-bold text-gray-900 dark:text-white mb-4 sticky top-0 bg-white dark:bg-gray-800 py-2 z-10">
-                    Games</h2>
+                <div class="flex justify-between items-center mb-4 sticky top-0 bg-white dark:bg-gray-800 py-2 z-10">
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Games</h2>
+                    <button
+                        @click="toggleAutoSequence"
+                        :disabled="gameList.length === 0"
+                        :class="[
+                            'px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5',
+                            isAutoSequenceRunning 
+                                ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse' 
+                                : 'bg-emerald-600 hover:bg-emerald-700 text-white hover:scale-105 active:scale-95'
+                        ]"
+                    >
+                        <span>{{ isAutoSequenceRunning ? '⏹ Dừng chạy lần lượt' : '⚡ Chạy lần lượt toàn bộ Quest' }}</span>
+                    </button>
+                </div>
                 <div v-if="gameList.length === 0" class="text-gray-500 dark:text-gray-400 text-center py-8">
                     No games selected. Search and add games from the search bar.
                 </div>
