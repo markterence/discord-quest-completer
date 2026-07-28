@@ -29,4 +29,6 @@ tauri-plugin-http = "2"
 tauri-plugin-dialog = "2"
 reqwest = { version = "=0.11", features = ["json", "multipart", "brotli", "gzip", "blocking"] }
 regex = "1.10"
+aes-gcm = "0.10"
+base64 = "0.22"
 

