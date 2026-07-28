@@ -474,12 +474,17 @@ async function autoSyncUserQuests() {
     }
 }
 
-// Watch when gameDB is loaded/ready to auto-sync games
-watch(gameDB, (newDb) => {
-    if (newDb && newDb.length > 0) {
-        autoSyncUserQuests();
-    }
+// Automatically trigger quest sync on startup
+tryOnMounted(() => {
+    autoSyncUserQuests();
 });
+
+// Watch when activeUnfinishedQuests or gameDB updates to auto-add games directly into the Games panel!
+watch([activeUnfinishedQuests, gameDB], ([newQuests]) => {
+    if (newQuests && newQuests.length > 0) {
+        handleSyncGames();
+    }
+}, { immediate: true, deep: true });
 
 async function handleRefetchGameList() {
     await fetchGameList();
