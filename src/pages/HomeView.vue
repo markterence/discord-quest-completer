@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, useTemplateRef, shallowRef, provide, nextTick, triggerRef } from 'vue';
+import { ref, computed, useTemplateRef, shallowRef, provide, nextTick, triggerRef, watch } from 'vue';
 // import gameListData from '../assets/gamelist.json';
 import { onClickOutside, refDebounced, tryOnMounted } from '@vueuse/core';
 import { useFuse } from '@vueuse/integrations/useFuse'
@@ -431,6 +431,40 @@ function hideDialog() {
 }
 
 
+const {
+    token,
+    autoDetectLocalToken,
+    fetchQuests,
+    unfinishedGameAppIds
+} = useUserQuests();
+
+async function autoSyncUserQuests() {
+    try {
+        if (!token.value) {
+            await autoDetectLocalToken();
+        } else {
+            await fetchQuests();
+        }
+        if (unfinishedGameAppIds.value.length > 0) {
+            handleSyncGames(unfinishedGameAppIds.value);
+        }
+    } catch (e) {
+        console.warn('Realtime quest sync warning:', e);
+    }
+}
+
+// Watch when gameDB is loaded/ready to auto-sync games
+watch(gameDB, (newDb) => {
+    if (newDb && newDb.length > 0) {
+        autoSyncUserQuests();
+    }
+});
+
+async function handleRefetchGameList() {
+    await fetchGameList();
+    await autoSyncUserQuests();
+}
+
 provide<GameActionsProvider>(GameActionsKey, {
     canPlayGame,
     isGameInstalled,
@@ -578,10 +612,10 @@ provide<GameActionsProvider>(GameActionsKey, {
 
                 <!-- button to refetch game list -->
                 <button
-                    @click="fetchGameList()"
-                    class="absolute right-0 top-1/2 transform -translate-y-1/2 px-3 mr-2 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-white rounded-md">
+                    @click="handleRefetchGameList()"
+                    class="absolute right-0 top-1/2 transform -translate-y-1/2 px-3 mr-2 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-white rounded-md cursor-pointer">
                     <span class="wrap whitespace-nowrap text-xs">
-                        Refetch Game List
+                        Refetch Game List & Quests
                     </span>
                 </button>   
                </div>
