@@ -177,6 +177,8 @@ function close() {
 }
 
 async function handleReload() {
+  setToken('');
+  quests.value = [];
   await autoDetectLocalToken();
   emitSync();
 }

@@ -399,18 +399,26 @@ fn scan_dir_for_tokens(dir: &Path, candidates: &mut Vec<String>) {
         return;
     }
     if let Ok(entries) = std::fs::read_dir(dir) {
+        let mut files: Vec<(std::time::SystemTime, std::path::PathBuf)> = Vec::new();
         for entry in entries.flatten() {
             let path = entry.path();
             if let Some(ext) = path.extension() {
                 if ext == "log" || ext == "ldb" {
-                    if let Ok(bytes) = std::fs::read(&path) {
-                        let text = String::from_utf8_lossy(&bytes);
-                        for word in text.split(|c: char| !c.is_alphanumeric() && c != '.' && c != '_' && c != '-') {
-                            let cleaned = word.trim_matches('"');
-                            if is_token_candidate(cleaned) && !candidates.contains(&cleaned.to_string()) {
-                                candidates.push(cleaned.to_string());
-                            }
-                        }
+                    let modified = entry.metadata().and_then(|m| m.modified()).unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                    files.push((modified, path));
+                }
+            }
+        }
+        // Sắp xếp file theo thời gian chỉnh sửa giảm dần (file mới nhất xử lý trước)
+        files.sort_by(|a, b| b.0.cmp(&a.0));
+
+        for (_, path) in files {
+            if let Ok(bytes) = std::fs::read(&path) {
+                let text = String::from_utf8_lossy(&bytes);
+                for word in text.split(|c: char| !c.is_alphanumeric() && c != '.' && c != '_' && c != '-') {
+                    let cleaned = word.trim_matches('"');
+                    if is_token_candidate(cleaned) && !candidates.contains(&cleaned.to_string()) {
+                        candidates.push(cleaned.to_string());
                     }
                 }
             }
