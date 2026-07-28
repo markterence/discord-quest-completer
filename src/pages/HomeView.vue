@@ -17,7 +17,9 @@ import { UseFuseOptions } from '@vueuse/integrations';
 import Fuse from 'fuse.js';
 import { useGlobalState } from '@/composables/app-state';
 import TimedNotification from '@/components/TimedNotification.vue';
+import DiscordAccountModal from '@/components/DiscordAccountModal.vue';
 
+const isAccountModalOpen = ref(false);
 
 type DialogKey = 
     'none' | 
@@ -157,6 +159,23 @@ function addGameToList(game: Game) {
     }
 
     closeSearchResults();
+}
+
+function handleSyncGames(appIds: string[]) {
+    if (!appIds || appIds.length === 0) {
+        addLog('info', 'No active unfinished quests found to sync.');
+        return;
+    }
+    let addedCount = 0;
+    appIds.forEach(id => {
+        const found = gameDB.value.find(g => String(g.id) === String(id));
+        if (found) {
+            addGameToList(found);
+            addedCount++;
+        }
+    });
+    addLog('info', `Auto-synced ${addedCount} games with active quests from account.`);
+    isAccountModalOpen.value = false;
 }
 
 const forceRerenderKey = ref(0); 
@@ -556,14 +575,25 @@ provide<GameActionsProvider>(GameActionsKey, {
                     class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                     @focus="openSearchResults" @blur="handleSearchBlur" />
 
-                <!-- buttons to refetch game list -->
-                <button
-                    @click="fetchGameList()"
-                    class="absolute right-0 top-1/2 transform -translate-y-1/2 px-3 mr-2 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-white rounded-md">
-                    <span class="wrap whitespace-nowrap text-xs">
-                        Refetch Game List
-                    </span>
-                </button>   
+                <!-- action buttons inside search bar -->
+                <div class="absolute right-0 top-1/2 transform -translate-y-1/2 flex items-center gap-1.5 mr-2">
+                    <button
+                        @click="isAccountModalOpen = true"
+                        class="px-3 py-1 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-md transition-colors flex items-center gap-1"
+                        title="Sync quests from your Discord account"
+                    >
+                        <span class="wrap whitespace-nowrap text-xs font-medium">
+                            🔑 Account Quests
+                        </span>
+                    </button>
+                    <button
+                        @click="fetchGameList()"
+                        class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-white rounded-md">
+                        <span class="wrap whitespace-nowrap text-xs">
+                            Refetch Game List
+                        </span>
+                    </button>
+                </div>   
                </div>
                 <div v-if="searchResultsIsOpen" @click="isOnSearchResults = true"
                     class="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -753,6 +783,13 @@ provide<GameActionsProvider>(GameActionsKey, {
                 </div>
             </div>
         </div>
+
+        <!-- Discord Account Quests Modal -->
+        <DiscordAccountModal
+            :is-open="isAccountModalOpen"
+            @close="isAccountModalOpen = false"
+            @sync-games="handleSyncGames"
+        />
     </div>
 </template>
 

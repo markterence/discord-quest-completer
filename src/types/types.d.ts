@@ -26,3 +26,27 @@ export interface GameActionsProvider {
   isExecutableRunning: (executable: GameExecutable) => boolean;
   isGameExecutableInstalled: (executable: GameExecutable) => boolean;
 }
+
+export interface QuestUserStatus {
+  completed_at?: string | null;
+  enrolled_at?: string | null;
+  progress?: Record<string, number>;
+  claimed_at?: string | null;
+}
+
+export interface QuestConfig {
+  application_id: string;
+  application_name?: string;
+  title?: string;
+  expires_at?: string;
+  messages?: {
+    game_title?: string;
+    quest_name?: string;
+  };
+}
+
+export interface DiscordQuest {
+  id: string;
+  config: QuestConfig;
+  user_status?: QuestUserStatus;
+}

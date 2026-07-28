@@ -270,6 +270,27 @@ async fn fetch_gamelist_from_discord() -> tauri::ipc::Response {
     tauri::ipc::Response::new(res.unwrap().text().await.unwrap())
 }
 
+#[tauri::command(rename_all = "snake_case")]
+async fn fetch_user_quests(token: String) -> Result<String, String> {
+    let client = tauri_plugin_http::reqwest::Client::new();
+    let res = client
+        .get("https://discord.com/api/v10/users/@me/quests")
+        .header("Authorization", token.trim())
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+
+    if !res.status().is_success() {
+        return Err(format!("Discord API error status: {}", res.status()));
+    }
+
+    let text = res
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+    Ok(text)
+}
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -285,7 +306,8 @@ pub fn run() {
             run_background_process,
             fetch_gamelist_gh_mirror,
             fetch_gamelist_from_discord,
-            create_steam_appmanifest
+            create_steam_appmanifest,
+            fetch_user_quests
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
