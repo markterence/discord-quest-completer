@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Pages, useGlobalState } from '@/composables/app-state';
+import { useUserQuests } from '@/composables/use-user-quests';
 import IconRustLang from './IconRustLang.vue';
 import IconVueJs from './IconVueJs.vue';
 
@@ -7,23 +8,24 @@ import IconVueJs from './IconVueJs.vue';
 
 const appState = useGlobalState();
 const { page, setPage } = appState;
+const { isAccountModalOpen, token, activeUnfinishedQuests } = useUserQuests();
 
 </script>
 
 <template>
   <div class="flex flex-col h-dvh overflow-hidden bg-gray-100 dark:bg-gray-900">
     <header class="bg-white dark:bg-gray-800 shadow-md">
-      <div class="container mx-auto px-4 py-4 flex items-center justify-between">
-        <div class="flex items-center space-x-2">
+      <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
           <img src="/logo.svg" alt="Logo" class="h-8 w-8" />
-          <h2 class="text-xl font-bold text-gray-900 dark:text-white"></h2>
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white">Discord Quest Completer</h2>
         </div>
         <nav>
-          <ul class="flex space-x-6">
+          <ul class="flex items-center space-x-5">
             <li>
               <a href="#" 
-                class="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400"
-                :class="{ 'text-indigo-600 dark:text-indigo-400': page === Pages.HOME }"
+                class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                :class="{ 'text-indigo-600 dark:text-indigo-400 font-semibold': page === Pages.HOME }"
                 @click.prevent="setPage(Pages.HOME)"
               >
                 Home
@@ -31,15 +33,23 @@ const { page, setPage } = appState;
             </li> 
             <li>
               <a href="#" 
-                class="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400"
-                :class="{ 'text-indigo-600 dark:text-indigo-400': page === Pages.PLAYGROUND }"
+                class="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                :class="{ 'text-indigo-600 dark:text-indigo-400 font-semibold': page === Pages.PLAYGROUND }"
                 @click.prevent="setPage(Pages.PLAYGROUND)"
               >
                 Playground
               </a>
             </li>
             <li>
-              <a href="#" class="text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400">Settings</a>
+              <button
+                @click="isAccountModalOpen = true"
+                class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold text-xs shadow-md shadow-indigo-500/20 transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                <svg class="w-4 h-4 fill-current" viewBox="0 0 127.14 96.36">
+                  <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22c2.7-27.42-4.81-51.17-18.9-72.15ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.91,53.87,53,48.8,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.91,96.1,53,91.08,65.69,84.69,65.69Z"/>
+                </svg>
+                <span>{{ token ? `Account Quests (${activeUnfinishedQuests.length})` : 'Login with Discord' }}</span>
+              </button>
             </li>
           </ul>
         </nav>

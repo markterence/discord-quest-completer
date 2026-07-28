@@ -5,6 +5,7 @@ import type { DiscordQuest } from '@/types/types';
 import { useGlobalState } from './app-state';
 
 const TOKEN_STORAGE_KEY = 'discord_user_token_v1';
+const isAccountModalOpen = ref(false);
 
 export function useUserQuests() {
   const { addLog } = useGlobalState();
@@ -96,6 +97,7 @@ export function useUserQuests() {
   });
 
   return {
+    isAccountModalOpen,
     token,
     quests,
     isLoading,

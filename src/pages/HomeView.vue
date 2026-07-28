@@ -18,8 +18,9 @@ import Fuse from 'fuse.js';
 import { useGlobalState } from '@/composables/app-state';
 import TimedNotification from '@/components/TimedNotification.vue';
 import DiscordAccountModal from '@/components/DiscordAccountModal.vue';
+import { useUserQuests } from '@/composables/use-user-quests';
 
-const isAccountModalOpen = ref(false);
+const { isAccountModalOpen } = useUserQuests();
 
 type DialogKey = 
     'none' | 
@@ -575,25 +576,14 @@ provide<GameActionsProvider>(GameActionsKey, {
                     class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                     @focus="openSearchResults" @blur="handleSearchBlur" />
 
-                <!-- action buttons inside search bar -->
-                <div class="absolute right-0 top-1/2 transform -translate-y-1/2 flex items-center gap-1.5 mr-2">
-                    <button
-                        @click="isAccountModalOpen = true"
-                        class="px-3 py-1 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-md transition-colors flex items-center gap-1"
-                        title="Sync quests from your Discord account"
-                    >
-                        <span class="wrap whitespace-nowrap text-xs font-medium">
-                            🔑 Account Quests
-                        </span>
-                    </button>
-                    <button
-                        @click="fetchGameList()"
-                        class="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-white rounded-md">
-                        <span class="wrap whitespace-nowrap text-xs">
-                            Refetch Game List
-                        </span>
-                    </button>
-                </div>   
+                <!-- button to refetch game list -->
+                <button
+                    @click="fetchGameList()"
+                    class="absolute right-0 top-1/2 transform -translate-y-1/2 px-3 mr-2 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-white rounded-md">
+                    <span class="wrap whitespace-nowrap text-xs">
+                        Refetch Game List
+                    </span>
+                </button>   
                </div>
                 <div v-if="searchResultsIsOpen" @click="isOnSearchResults = true"
                     class="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
