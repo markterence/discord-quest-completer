@@ -461,6 +461,29 @@ async fn open_default_browser(url: String) -> Result<(), String> {
 }
 
 
+#[tauri::command(rename_all = "snake_case")]
+async fn fetch_user_profile(token: String) -> Result<String, String> {
+    let client = tauri_plugin_http::reqwest::Client::new();
+    let token_clean = token.trim().trim_matches('"');
+    let res = client
+        .get("https://discord.com/api/v10/users/@me")
+        .header("Authorization", token_clean)
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+
+    if !res.status().is_success() {
+        return Err(format!("Discord API error status: {}", res.status()));
+    }
+
+    let text = res
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+    Ok(text)
+}
+
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -480,7 +503,8 @@ pub fn run() {
             open_discord_login_window,
             token_captured_internal,
             open_default_browser,
-            auto_detect_discord_token
+            auto_detect_discord_token,
+            fetch_user_profile
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

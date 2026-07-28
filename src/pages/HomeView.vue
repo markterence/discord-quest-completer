@@ -162,20 +162,40 @@ function addGameToList(game: Game) {
     closeSearchResults();
 }
 
-function handleSyncGames(appIds: string[]) {
-    if (!appIds || appIds.length === 0) {
+function handleSyncGames() {
+    if (!activeUnfinishedQuests.value || activeUnfinishedQuests.value.length === 0) {
         addLog('info', 'No active unfinished quests found to sync.');
         return;
     }
     let addedCount = 0;
-    appIds.forEach(id => {
-        const found = gameDB.value.find(g => String(g.id) === String(id));
-        if (found) {
+    activeUnfinishedQuests.value.forEach(quest => {
+        const appId = quest.config?.application_id;
+        if (!appId) return;
+
+        const title = quest.config?.messages?.game_title || quest.config?.application_name || 'Discord Quest Game';
+        
+        let found: Game | undefined = gameDB.value.find(g => String(g.id) === String(appId));
+        if (!found) {
+            found = {
+                id: appId,
+                name: title,
+                executables: [],
+            };
+        }
+        
+        const alreadyInList = gameList.value.some(g => String(g.id) === String(appId));
+        if (!alreadyInList) {
             addGameToList(found);
             addedCount++;
         }
     });
-    addLog('info', `Auto-synced ${addedCount} games with active quests from account.`);
+
+    addLog('info', `Auto-added ${addedCount} quest games directly to the game list.`);
+    
+    if (!selectedGameId.value && gameList.value.length > 0) {
+        selectedGameId.value = gameList.value[0].uid;
+    }
+
     isAccountModalOpen.value = false;
 }
 
@@ -435,6 +455,7 @@ const {
     token,
     autoDetectLocalToken,
     fetchQuests,
+    activeUnfinishedQuests,
     unfinishedGameAppIds
 } = useUserQuests();
 
@@ -445,8 +466,8 @@ async function autoSyncUserQuests() {
         } else {
             await fetchQuests();
         }
-        if (unfinishedGameAppIds.value.length > 0) {
-            handleSyncGames(unfinishedGameAppIds.value);
+        if (activeUnfinishedQuests.value.length > 0) {
+            handleSyncGames();
         }
     } catch (e) {
         console.warn('Realtime quest sync warning:', e);

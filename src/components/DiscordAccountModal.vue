@@ -30,11 +30,30 @@
         <div class="p-6 overflow-y-auto space-y-5 flex-1">
           <!-- Main Login Actions -->
           <div class="text-center p-5 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-xl space-y-4">
-            <p class="text-xs text-gray-600 dark:text-gray-300">
-              Đăng nhập tài khoản Discord bằng Cửa sổ Trình duyệt Web (hỗ trợ Mật khẩu, 2FA & QR Code). Phiên đăng nhập sẽ được lưu tự động!
-            </p>
+            <!-- Account Profile Badge when logged in -->
+            <div v-if="token && userProfile" class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600/60 rounded-xl shadow-xs">
+              <img :src="avatarUrl" class="w-11 h-11 rounded-full border-2 border-indigo-500 shadow-sm" />
+              <div class="flex-1 text-left">
+                <div class="font-bold text-sm text-gray-900 dark:text-white">
+                  {{ userProfile.global_name || userProfile.username }}
+                </div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">
+                  @{{ userProfile.username }}
+                </div>
+              </div>
+              <button
+                @click="handleLogout"
+                class="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer"
+              >
+                Đổi tài khoản
+              </button>
+            </div>
 
-            <div class="flex flex-col gap-2.5">
+            <div v-else class="flex flex-col gap-2.5">
+              <p class="text-xs text-gray-600 dark:text-gray-300">
+                Đăng nhập tài khoản Discord bằng Cửa sổ Trình duyệt Web (hỗ trợ Mật khẩu, 2FA & QR Code). Phiên đăng nhập sẽ được lưu tự động!
+              </p>
+
               <button
                 @click="openLoginWindow"
                 :disabled="isLoading"
@@ -52,19 +71,6 @@
               >
                 <span class="text-sm">⚡</span>
                 <span>Hoặc Nhận diện tự động phiên Discord trên máy</span>
-              </button>
-            </div>
-
-            <!-- Login status -->
-            <div v-if="token" class="pt-2 border-t border-gray-200 dark:border-gray-700/60 flex items-center justify-between text-xs">
-              <span class="text-emerald-600 dark:text-emerald-400 font-medium">
-                ✓ Phiên đăng nhập đang hoạt động (Đã lưu)
-              </span>
-              <button
-                @click="handleLogout"
-                class="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-semibold underline text-[11px] cursor-pointer"
-              >
-                Đăng xuất / Đổi tài khoản khác
               </button>
             </div>
           </div>
@@ -151,6 +157,8 @@ const emit = defineEmits<{
 const {
   token,
   quests,
+  userProfile,
+  avatarUrl,
   isLoading,
   errorMessage,
   setToken,

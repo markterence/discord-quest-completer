@@ -4,8 +4,16 @@ import { listen } from '@tauri-apps/api/event';
 import type { DiscordQuest } from '@/types/types';
 import { useGlobalState } from './app-state';
 
+export interface DiscordUserProfile {
+  id: string;
+  username: string;
+  global_name?: string;
+  avatar?: string;
+}
+
 const TOKEN_STORAGE_KEY = 'discord_user_token_v1';
 const isAccountModalOpen = ref(false);
+const userProfile = ref<DiscordUserProfile | null>(null);
 
 export function useUserQuests() {
   const { addLog } = useGlobalState();
@@ -14,12 +22,21 @@ export function useUserQuests() {
   const isLoading = ref<boolean>(false);
   const errorMessage = ref<string | null>(null);
 
+  const avatarUrl = computed(() => {
+    if (!userProfile.value) return '';
+    if (userProfile.value.avatar) {
+      return `https://cdn.discordapp.com/avatars/${userProfile.value.id}/${userProfile.value.avatar}.png`;
+    }
+    return `https://cdn.discordapp.com/embed/avatars/0.png`;
+  });
+
   function setToken(newToken: string) {
     token.value = newToken.trim();
     if (token.value) {
       localStorage.setItem(TOKEN_STORAGE_KEY, token.value);
     } else {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
+      userProfile.value = null;
     }
   }
 
@@ -43,9 +60,21 @@ export function useUserQuests() {
         addLog('info', 'Successfully captured Discord session from browser login!');
         setToken(event.payload.token);
         fetchQuests();
+        fetchUserProfile();
       }
     });
   });
+
+  async function fetchUserProfile() {
+    if (!token.value) return;
+    try {
+      const raw = await invoke<string>('fetch_user_profile', { token: token.value });
+      userProfile.value = JSON.parse(raw);
+      addLog('info', `Logged in as Discord user: ${userProfile.value?.global_name || userProfile.value?.username}`);
+    } catch (err) {
+      console.warn('Failed to fetch user profile:', err);
+    }
+  }
 
   async function fetchQuests(): Promise<DiscordQuest[]> {
     if (!token.value) {
@@ -67,6 +96,7 @@ export function useUserQuests() {
 
       quests.value = questList;
       addLog('info', `Fetched ${questList.length} quests from user account.`);
+      fetchUserProfile();
       return questList;
     } catch (err: any) {
       const msg = typeof err === 'string' ? err : err?.message || 'Failed to fetch quests.';
@@ -117,6 +147,7 @@ export function useUserQuests() {
         setToken(detectedToken);
         addLog('info', 'Successfully auto-detected active Discord account session!');
         await fetchQuests();
+        await fetchUserProfile();
       }
     } catch (err: any) {
       const msg = typeof err === 'string' ? err : err?.message || 'Could not auto-detect token.';
@@ -130,6 +161,8 @@ export function useUserQuests() {
     isAccountModalOpen,
     token,
     quests,
+    userProfile,
+    avatarUrl,
     isLoading,
     errorMessage,
     setToken,
@@ -137,6 +170,7 @@ export function useUserQuests() {
     openDefaultBrowser,
     autoDetectLocalToken,
     fetchQuests,
+    fetchUserProfile,
     activeUnfinishedQuests,
     unfinishedGameAppIds,
   };
