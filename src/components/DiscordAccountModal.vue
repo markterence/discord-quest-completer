@@ -42,10 +42,12 @@
                 </div>
               </div>
               <button
-                @click="handleLogout"
-                class="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 px-3 py-1.5 rounded-lg font-semibold transition-colors cursor-pointer"
+                @click="handleReload"
+                :disabled="isLoading"
+                class="text-xs bg-[#5865F2] hover:bg-[#4752C4] disabled:opacity-50 text-white px-3 py-1.5 rounded-lg font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
               >
-                Đổi tài khoản
+                <span :class="{'animate-spin': isLoading}">🔄</span>
+                <span>Reload</span>
               </button>
             </div>
 
@@ -174,10 +176,9 @@ function close() {
   emit('close');
 }
 
-function handleLogout() {
-  setToken('');
-  quests.value = [];
-  autoDetectLocalToken();
+async function handleReload() {
+  await autoDetectLocalToken();
+  emitSync();
 }
 
 function emitSync() {

@@ -132,14 +132,23 @@ export function useUserQuests() {
 
 
 
-  // Filter quests that are NOT completed yet
+  // Filter quests that are NOT completed yet and NOT expired
   const activeUnfinishedQuests = computed(() => {
+    const now = new Date();
     return quests.value.filter((q: any) => {
       const appId = getQuestAppId(q);
       if (!appId) return false;
       const status = q.user_status;
       // If completed_at is present or claimed_at, skip
       if (status?.completed_at || status?.claimed_at) return false;
+
+      // Check expiry date if present in quest config
+      if (q.config?.expires_at) {
+        const expiryDate = new Date(q.config.expires_at);
+        if (!isNaN(expiryDate.getTime()) && expiryDate <= now) {
+          return false; // Quest has expired, skip
+        }
+      }
       return true;
     });
   });
