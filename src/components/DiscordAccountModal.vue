@@ -65,6 +65,29 @@
                 <span class="text-base">⚡</span>
                 <span>{{ isLoading ? 'Đang nhận diện tài khoản...' : 'Đồng bộ từ Discord Desktop App' }}</span>
               </button>
+
+              <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700/50">
+                <button 
+                  @click="showManualInput = !showManualInput" 
+                  class="text-[11px] text-[#5865F2] hover:underline font-semibold cursor-pointer"
+                >
+                  {{ showManualInput ? 'Ẩn nhập thủ công' : 'Nhập token thủ công' }}
+                </button>
+                <div v-if="showManualInput" class="mt-2 flex gap-1.5">
+                  <input 
+                    v-model="manualToken" 
+                    type="password" 
+                    placeholder="Nhập Discord Token vào đây..." 
+                    class="flex-1 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                  />
+                  <button 
+                    @click="submitManualToken"
+                    class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-bold cursor-pointer"
+                  >
+                    Lưu
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -134,10 +157,13 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue';
+import { watch, ref } from 'vue';
 import DiscordLogoIcon from './DiscordLogoIcon.vue';
 import { useUserQuests, getQuestGameTitle } from '@/composables/use-user-quests';
 import type { DiscordQuest } from '@/types/types';
+
+const showManualInput = ref(false);
+const manualToken = ref('');
 
 const props = defineProps<{
   isOpen: boolean;
@@ -186,6 +212,15 @@ async function handleReload() {
 
 function emitSync() {
   emit('sync-games', unfinishedGameAppIds.value);
+}
+
+async function submitManualToken() {
+  if (!manualToken.value.trim()) return;
+  setToken(manualToken.value);
+  showManualInput.value = false;
+  manualToken.value = '';
+  await fetchQuests();
+  emitSync();
 }
 
 function isCompleted(quest: DiscordQuest): boolean {

