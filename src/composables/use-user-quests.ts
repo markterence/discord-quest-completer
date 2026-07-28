@@ -1,5 +1,6 @@
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import type { DiscordQuest } from '@/types/types';
 import { useGlobalState } from './app-state';
 
@@ -21,9 +22,33 @@ export function useUserQuests() {
     }
   }
 
+  async function openLoginWindow() {
+    isLoading.value = true;
+    errorMessage.value = null;
+    addLog('info', 'Opening Discord Browser Login Window...');
+    try {
+      await invoke('open_discord_login_window');
+    } catch (err: any) {
+      const msg = typeof err === 'string' ? err : err?.message || 'Failed to open login window.';
+      errorMessage.value = msg;
+      addLog('error', `Error opening login window: ${msg}`);
+      isLoading.value = false;
+    }
+  }
+
+  onMounted(() => {
+    listen<{ token: string }>('discord_token_captured', (event) => {
+      if (event.payload?.token) {
+        addLog('info', 'Successfully captured Discord session from browser login!');
+        setToken(event.payload.token);
+        fetchQuests();
+      }
+    });
+  });
+
   async function fetchQuests(): Promise<DiscordQuest[]> {
     if (!token.value) {
-      errorMessage.value = 'Please enter a valid Discord User Token.';
+      errorMessage.value = 'Please log in with Discord first.';
       return [];
     }
 
@@ -76,6 +101,7 @@ export function useUserQuests() {
     isLoading,
     errorMessage,
     setToken,
+    openLoginWindow,
     fetchQuests,
     activeUnfinishedQuests,
     unfinishedGameAppIds,

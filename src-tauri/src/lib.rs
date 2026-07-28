@@ -291,6 +291,82 @@ async fn fetch_user_quests(token: String) -> Result<String, String> {
     Ok(text)
 }
 
+#[tauri::command(rename_all = "snake_case")]
+async fn open_discord_login_window(handle: AppHandle) -> Result<(), String> {
+    if let Some(win) = handle.get_webview_window("discord_login") {
+        let _ = win.set_focus();
+        return Ok(());
+    }
+
+    let init_script = r#"
+        (function() {
+            function checkToken() {
+                try {
+                    let token = null;
+                    if (window.webpackChunkdiscord_app) {
+                        window.webpackChunkdiscord_app.push([[Math.random()],{},e=>{
+                            for(const c of Object.values(e.c)) {
+                                if(c?.exports?.default?.getToken) {
+                                    let t = c.exports.default.getToken();
+                                    if (t && typeof t === 'string' && t.length > 20) {
+                                        token = t;
+                                    }
+                                }
+                            }
+                        }]);
+                    }
+                    if (!token && window.localStorage) {
+                        for (let i = 0; i < window.localStorage.length; i++) {
+                            let key = window.localStorage.key(i);
+                            if (key && key.includes('token')) {
+                                let val = window.localStorage.getItem(key);
+                                if (val) {
+                                    let cleaned = val.replace(/^"|"$/g, '');
+                                    if (cleaned.length > 20) {
+                                        token = cleaned;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (token) {
+                        window.__TAURI_INTERNALS__.invoke('token_captured_internal', { token: token });
+                    }
+                } catch(e) {}
+            }
+            setInterval(checkToken, 1500);
+        })();
+    "#;
+
+    let window_res = tauri::WebviewWindowBuilder::new(
+        &handle,
+        "discord_login",
+        tauri::WebviewUrl::External("https://discord.com/login".parse().map_err(|e| format!("{}", e))?),
+    )
+    .title("Log in with Discord")
+    .inner_size(850.0, 650.0)
+    .initialization_script(init_script)
+    .build();
+
+    match window_res {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Failed to open login window: {}", e)),
+    }
+}
+
+#[tauri::command(rename_all = "snake_case")]
+async fn token_captured_internal(handle: AppHandle, token: String) -> Result<(), String> {
+    let payload = serde_json::json!({
+        "token": token
+    });
+    let _ = handle.emit("discord_token_captured", payload);
+    if let Some(win) = handle.get_webview_window("discord_login") {
+        let _ = win.close();
+    }
+    Ok(())
+}
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -307,7 +383,9 @@ pub fn run() {
             fetch_gamelist_gh_mirror,
             fetch_gamelist_from_discord,
             create_steam_appmanifest,
-            fetch_user_quests
+            fetch_user_quests,
+            open_discord_login_window,
+            token_captured_internal
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

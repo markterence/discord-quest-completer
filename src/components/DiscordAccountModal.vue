@@ -13,9 +13,9 @@
         <!-- Header -->
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/80">
           <div class="flex items-center gap-2">
-            <span class="text-xl">🔑</span>
+            <span class="text-xl">🌐</span>
             <h3 class="text-lg font-bold text-gray-900 dark:text-white">
-              Sync Account Quests
+              Discord Account Quests
             </h3>
           </div>
           <button
@@ -28,31 +28,52 @@
 
         <!-- Content -->
         <div class="p-6 overflow-y-auto space-y-5 flex-1">
-          <!-- Token Input Section -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Discord User Token
-            </label>
-            <div class="flex gap-2">
-              <input
-                v-model="inputToken"
-                type="password"
-                placeholder="Paste your Discord User Token here..."
-                class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
-              />
-              <button
-                @click="handleSaveAndFetch"
-                :disabled="isLoading || !inputToken"
-                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-sm rounded-lg transition-colors flex items-center gap-1.5"
-              >
-                <span v-if="isLoading" class="animate-spin">🌀</span>
-                <span>{{ isLoading ? 'Fetching...' : 'Fetch Quests' }}</span>
-              </button>
-            </div>
+          <!-- Main Login Action -->
+          <div class="text-center p-4 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-xl space-y-3">
+            <p class="text-sm text-gray-600 dark:text-gray-300">
+              Log in to your Discord account via the official browser window (supports Password, 2FA & QR Code).
+            </p>
 
-            <!-- Help Accordion / Tip -->
-            <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 p-2.5 rounded-lg border border-gray-200 dark:border-gray-600/50">
-              💡 <strong>How to get your Token:</strong> Open Discord in Browser ➔ Press <code class="bg-gray-200 dark:bg-gray-600 px-1 rounded text-xs">F12</code> ➔ Go to <strong>Console</strong> ➔ Paste <code class="bg-gray-200 dark:bg-gray-600 px-1 rounded text-xs">window.webpackChunkdiscord_app.push([[Math.random()],{},e=>{for(const c of Object.values(e.c))if(c?.exports?.default?.getToken)console.log(c.exports.default.getToken())}])</code>
+            <button
+              @click="openLoginWindow"
+              :disabled="isLoading"
+              class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-sm rounded-lg shadow-md transition-all flex items-center justify-center gap-2"
+            >
+              <span v-if="isLoading" class="animate-spin">🌀</span>
+              <span class="text-base">🌐</span>
+              <span>{{ isLoading ? 'Waiting for Login...' : 'Log in with Discord (Browser Window)' }}</span>
+            </button>
+
+            <p v-if="token" class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+              ✓ Logged in & session active
+            </p>
+          </div>
+
+          <!-- Manual Token Option Toggle -->
+          <div class="text-xs">
+            <button
+              @click="showManualToken = !showManualToken"
+              class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline font-medium"
+            >
+              {{ showManualToken ? 'Hide manual Token input' : 'Or enter Token manually...' }}
+            </button>
+
+            <div v-if="showManualToken" class="mt-3 space-y-2">
+              <div class="flex gap-2">
+                <input
+                  v-model="inputToken"
+                  type="password"
+                  placeholder="Paste User Token here..."
+                  class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
+                />
+                <button
+                  @click="handleSaveAndFetch"
+                  :disabled="isLoading || !inputToken"
+                  class="px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white font-medium text-xs rounded-lg transition-colors"
+                >
+                  Fetch
+                </button>
+              </div>
             </div>
           </div>
 
@@ -141,12 +162,14 @@ const {
   isLoading,
   errorMessage,
   setToken,
+  openLoginWindow,
   fetchQuests,
   activeUnfinishedQuests,
   unfinishedGameAppIds,
 } = useUserQuests();
 
 const inputToken = ref(token.value);
+const showManualToken = ref(false);
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
