@@ -273,12 +273,22 @@ async fn fetch_gamelist_from_discord() -> tauri::ipc::Response {
 #[tauri::command(rename_all = "snake_case")]
 async fn fetch_user_quests(token: String) -> Result<String, String> {
     let client = tauri_plugin_http::reqwest::Client::new();
-    let res = client
-        .get("https://discord.com/api/v10/users/@me/quests")
-        .header("Authorization", token.trim())
+    let token_clean = token.trim().trim_matches('"');
+    let mut res = client
+        .get("https://discord.com/api/v9/quests/@me")
+        .header("Authorization", token_clean)
         .send()
         .await
         .map_err(|e| format!("Network error: {}", e))?;
+
+    if res.status().as_u16() == 404 {
+        res = client
+            .get("https://discord.com/api/v10/quests/@me")
+            .header("Authorization", token_clean)
+            .send()
+            .await
+            .map_err(|e| format!("Network error: {}", e))?;
+    }
 
     if !res.status().is_success() {
         return Err(format!("Discord API error status: {}", res.status()));
