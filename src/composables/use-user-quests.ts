@@ -96,6 +96,17 @@ export function useUserQuests() {
       .filter((id): id is string => Boolean(id));
   });
 
+  async function openDefaultBrowser(url = 'https://discord.com/login') {
+    addLog('info', `Opening default system browser at ${url}...`);
+    try {
+      await invoke('open_default_browser', { url });
+    } catch (err: any) {
+      const msg = typeof err === 'string' ? err : err?.message || 'Failed to open browser.';
+      errorMessage.value = msg;
+      addLog('error', `Error opening system browser: ${msg}`);
+    }
+  }
+
   return {
     isAccountModalOpen,
     token,
@@ -104,6 +115,7 @@ export function useUserQuests() {
     errorMessage,
     setToken,
     openLoginWindow,
+    openDefaultBrowser,
     fetchQuests,
     activeUnfinishedQuests,
     unfinishedGameAppIds,

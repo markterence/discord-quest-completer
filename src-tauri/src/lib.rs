@@ -368,6 +368,13 @@ async fn token_captured_internal(handle: AppHandle, token: String) -> Result<(),
 }
 
 
+#[tauri::command(rename_all = "snake_case")]
+async fn open_default_browser(url: String) -> Result<(), String> {
+    tauri_plugin_opener::open_url(&url, None::<&str>)
+        .map_err(|e| format!("Failed to open browser: {}", e))
+}
+
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -385,7 +392,8 @@ pub fn run() {
             create_steam_appmanifest,
             fetch_user_quests,
             open_discord_login_window,
-            token_captured_internal
+            token_captured_internal,
+            open_default_browser
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
