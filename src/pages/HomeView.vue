@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, useTemplateRef, shallowRef, provide, nextTick, triggerRef, watch } from 'vue';
 // import gameListData from '../assets/gamelist.json';
-import { onClickOutside, refDebounced, tryOnMounted } from '@vueuse/core';
+import { onClickOutside, refDebounced, tryOnMounted, tryOnUnmounted } from '@vueuse/core';
 import { useFuse } from '@vueuse/integrations/useFuse'
 import { invoke } from '@tauri-apps/api/core';
 import { randomString } from '@/utils/random-string';
@@ -510,9 +510,9 @@ async function startAutoSequence() {
     addLog('info', '🚀 Started Auto-Sequence Execution for all quest games!');
     await playCurrentSequenceGame();
     
-    // Start tracking progress every 20 seconds
+    // Start tracking progress every 5 seconds
     if (autoSequenceInterval) clearInterval(autoSequenceInterval);
-    autoSequenceInterval = setInterval(trackAndProgressSequence, 20000);
+    autoSequenceInterval = setInterval(trackAndProgressSequence, 5000);
 }
 
 function stopAutoSequence() {
@@ -523,6 +523,27 @@ function stopAutoSequence() {
     }
     addLog('info', '⏹️ Stopped Auto-Sequence Execution.');
 }
+
+// Poll every 5 seconds if any game is running to update the progress bar in real time!
+let manualTrackingInterval: any = null;
+
+tryOnMounted(() => {
+    manualTrackingInterval = setInterval(async () => {
+        if (!isAutoSequenceRunning.value && gameList.value.some(g => g.is_running)) {
+            try {
+                if (token.value) {
+                    await fetchQuests();
+                }
+            } catch (e) {
+                console.warn('Manual game tracking error:', e);
+            }
+        }
+    }, 5000);
+});
+
+tryOnUnmounted(() => {
+    if (manualTrackingInterval) clearInterval(manualTrackingInterval);
+});
 
 async function playCurrentSequenceGame() {
     if (!isAutoSequenceRunning.value) return;
