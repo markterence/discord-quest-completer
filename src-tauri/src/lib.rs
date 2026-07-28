@@ -90,13 +90,17 @@ async fn run_background_process(
         .join(app_id.to_string())
         .join(normalized_path);
     let executable_path = game_folder_path.join(executable_name);
-    // const DETACHED_PROCESS: u32 = 0x00000008;
-    // const CREATE_NO_WINDOW: u32 = 0x08000000; // Hide the window
-    match std::process::Command::new(&executable_path)
-        .args(["--title", name])
-        .current_dir(game_folder_path) // Set working directory to the game folder
-        .spawn()
-    {
+    #[cfg(target_os = "windows")]
+    use std::os::windows::process::CommandExt;
+
+    let mut cmd = std::process::Command::new(&executable_path);
+    cmd.args(["--title", name, "--tray"])
+       .current_dir(game_folder_path);
+
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+
+    match cmd.spawn() {
         Ok(_) => Ok("Process started successfully".to_string()),
         Err(e) => Err(format!("Failed to start process: {}", e)),
     }
