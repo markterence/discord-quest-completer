@@ -28,69 +28,23 @@
 
         <!-- Content -->
         <div class="p-6 overflow-y-auto space-y-5 flex-1">
-          <!-- Main System Browser Login Action -->
-          <div class="text-center p-4 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-xl space-y-3">
+          <!-- System Browser Login Action Only -->
+          <div class="text-center p-5 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-xl space-y-4">
             <p class="text-xs text-gray-600 dark:text-gray-300">
-              Mở Discord trên trình duyệt hệ thống. <em>(Lưu ý: Nếu trình duyệt của bạn đã đăng nhập sẵn, Discord sẽ tự động vào thẳng trang cá nhân)</em>.
+              Đăng nhập tài khoản Discord trên <strong>Trình duyệt hệ thống chính (Chrome / Edge / Firefox)</strong> để đồng bộ tự động danh sách Quest.
             </p>
 
-            <div class="flex flex-col gap-2">
-              <button
-                @click="openDefaultBrowser('https://discord.com/app')"
-                class="w-full py-2.5 px-4 bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold text-xs rounded-lg shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span class="text-base">🌐</span>
-                <span>Mở Discord trên Trình duyệt Hệ thống (Chrome / Edge)</span>
-              </button>
-
-              <button
-                @click="openLoginWindow"
-                :disabled="isLoading"
-                class="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span v-if="isLoading" class="animate-spin">🌀</span>
-                <span class="text-sm">🪟</span>
-                <span>{{ isLoading ? 'Đang đợi đăng nhập...' : 'Mở Cửa sổ Webview Auto-Capture (Tự động bắt Token)' }}</span>
-              </button>
-            </div>
+            <button
+              @click="openDefaultBrowser('https://discord.com/app')"
+              class="w-full py-3 px-4 bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold text-xs rounded-xl shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span class="text-base">🌐</span>
+              <span>Đăng nhập Discord trên Trình duyệt Hệ thống</span>
+            </button>
 
             <p v-if="token" class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              ✓ Đã có Session Token & Quest Active
+              ✓ Đã kết nối phiên làm việc & Quests Active
             </p>
-          </div>
-
-          <!-- Token Input Section -->
-          <div class="space-y-2">
-            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">
-              Session Token / Fetch Quests
-            </label>
-            <div class="flex gap-2">
-              <input
-                v-model="inputToken"
-                type="password"
-                placeholder="Paste Token here to sync active quests..."
-                class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
-              />
-              <button
-                @click="handleSaveAndFetch"
-                :disabled="isLoading || !inputToken"
-                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-xs rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                <span v-if="isLoading" class="animate-spin">🌀</span>
-                <span>{{ isLoading ? 'Syncing...' : 'Fetch Quests' }}</span>
-              </button>
-            </div>
-
-            <!-- Quick Copy Script Helper -->
-            <div class="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/40 p-2 rounded-lg border border-gray-200 dark:border-gray-600/50">
-              <span>💡 Need token from browser? Copy 1-line script for DevTools (F12):</span>
-              <button
-                @click="copyDevToolsScript"
-                class="ml-2 px-2 py-1 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 font-medium rounded text-[10px] transition-colors whitespace-nowrap cursor-pointer"
-              >
-                {{ scriptCopied ? 'Copied! ✓' : 'Copy Script 📋' }}
-              </button>
-            </div>
           </div>
 
           <!-- Error Alert -->
@@ -102,13 +56,13 @@
           <div v-if="quests.length > 0" class="space-y-3">
             <div class="flex justify-between items-center">
               <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                Active Quests ({{ activeUnfinishedQuests.length }} unfinished)
+                Active Quests ({{ activeUnfinishedQuests.length }} chưa hoàn thành)
               </h4>
               <button
                 @click="emitSync"
                 class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-md transition-colors cursor-pointer"
               >
-                ⚡ Auto-Add Games To List
+                ⚡ Thêm tự động Game vào danh sách
               </button>
             </div>
 
@@ -136,7 +90,7 @@
                         : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
                     ]"
                   >
-                    {{ isCompleted(quest) ? 'Completed ✓' : 'In Progress ⏳' }}
+                    {{ isCompleted(quest) ? 'Đã xong ✓' : 'Đang làm ⏳' }}
                   </span>
                 </div>
               </div>
@@ -150,7 +104,7 @@
             @click="close"
             class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
           >
-            Close
+            Đóng
           </button>
         </div>
       </div>
@@ -159,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { watch } from 'vue';
 import { useUserQuests } from '@/composables/use-user-quests';
 import type { DiscordQuest } from '@/types/types';
 
@@ -175,22 +129,15 @@ const emit = defineEmits<{
 const {
   token,
   quests,
-  isLoading,
   errorMessage,
-  setToken,
-  openLoginWindow,
   openDefaultBrowser,
   fetchQuests,
   activeUnfinishedQuests,
   unfinishedGameAppIds,
 } = useUserQuests();
 
-const inputToken = ref(token.value);
-const scriptCopied = ref(false);
-
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
-    inputToken.value = token.value;
     if (token.value && quests.value.length === 0) {
       fetchQuests();
     }
@@ -201,25 +148,8 @@ function close() {
   emit('close');
 }
 
-async function handleSaveAndFetch() {
-  setToken(inputToken.value);
-  const result = await fetchQuests();
-  if (result.length > 0) {
-    emitSync();
-  }
-}
-
 function emitSync() {
   emit('sync-games', unfinishedGameAppIds.value);
-}
-
-function copyDevToolsScript() {
-  const script = `window.webpackChunkdiscord_app.push([[Math.random()],{},e=>{for(const c of Object.values(e.c))if(c?.exports?.default?.getToken)console.log(c.exports.default.getToken())}])`;
-  navigator.clipboard.writeText(script);
-  scriptCopied.value = true;
-  setTimeout(() => {
-    scriptCopied.value = false;
-  }, 2500);
 }
 
 function isCompleted(quest: DiscordQuest): boolean {
