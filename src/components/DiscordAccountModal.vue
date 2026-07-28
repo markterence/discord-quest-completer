@@ -103,7 +103,7 @@
                 <div class="flex justify-between items-start">
                   <div>
                     <span class="font-bold text-gray-900 dark:text-white">
-                      {{ quest.config?.messages?.game_title || quest.config?.application_name || 'Game Quest' }}
+                      {{ getQuestGameTitle(quest) }}
                     </span>
                     <p class="text-gray-500 dark:text-gray-400 text-[11px]">
                       {{ quest.config?.messages?.quest_name || quest.config?.title || 'Quest' }}
@@ -142,7 +142,7 @@
 
 <script setup lang="ts">
 import { watch } from 'vue';
-import { useUserQuests } from '@/composables/use-user-quests';
+import { useUserQuests, getQuestGameTitle } from '@/composables/use-user-quests';
 import type { DiscordQuest } from '@/types/types';
 
 const props = defineProps<{

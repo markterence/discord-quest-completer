@@ -18,7 +18,7 @@ import Fuse from 'fuse.js';
 import { useGlobalState } from '@/composables/app-state';
 import TimedNotification from '@/components/TimedNotification.vue';
 import DiscordAccountModal from '@/components/DiscordAccountModal.vue';
-import { useUserQuests } from '@/composables/use-user-quests';
+import { useUserQuests, getQuestAppId, getQuestGameTitle } from '@/composables/use-user-quests';
 
 const { isAccountModalOpen } = useUserQuests();
 
@@ -169,10 +169,10 @@ function handleSyncGames() {
     }
     let addedCount = 0;
     activeUnfinishedQuests.value.forEach(quest => {
-        const appId = quest.config?.application_id;
+        const appId = getQuestAppId(quest);
         if (!appId) return;
 
-        const title = quest.config?.messages?.game_title || quest.config?.application_name || 'Discord Quest Game';
+        const title = getQuestGameTitle(quest);
         
         let found: Game | undefined = gameDB.value.find(g => String(g.id) === String(appId));
         if (!found) {

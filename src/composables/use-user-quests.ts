@@ -11,6 +11,28 @@ export interface DiscordUserProfile {
   avatar?: string;
 }
 
+export function getQuestAppId(q: any): string | null {
+  if (!q) return null;
+  const appId =
+    q.config?.application_id ||
+    q.config?.application?.id ||
+    q.application_id ||
+    q.application?.id ||
+    null;
+  return appId ? String(appId) : null;
+}
+
+export function getQuestGameTitle(q: any): string {
+  if (!q) return 'Discord Quest Game';
+  return (
+    q.config?.messages?.game_title ||
+    q.config?.application?.name ||
+    q.config?.application_name ||
+    q.config?.title ||
+    'Discord Quest Game'
+  );
+}
+
 const TOKEN_STORAGE_KEY = 'discord_user_token_v1';
 const isAccountModalOpen = ref(false);
 const userProfile = ref<DiscordUserProfile | null>(null);
@@ -108,10 +130,13 @@ export function useUserQuests() {
     }
   }
 
+
+
   // Filter quests that are NOT completed yet
   const activeUnfinishedQuests = computed(() => {
-    return quests.value.filter((q) => {
-      if (!q.config || !q.config.application_id) return false;
+    return quests.value.filter((q: any) => {
+      const appId = getQuestAppId(q);
+      if (!appId) return false;
       const status = q.user_status;
       // If completed_at is present or claimed_at, skip
       if (status?.completed_at || status?.claimed_at) return false;
@@ -122,7 +147,7 @@ export function useUserQuests() {
   // Extract application_ids of games to auto-add
   const unfinishedGameAppIds = computed(() => {
     return activeUnfinishedQuests.value
-      .map((q) => q.config.application_id)
+      .map((q) => getQuestAppId(q))
       .filter((id): id is string => Boolean(id));
   });
 

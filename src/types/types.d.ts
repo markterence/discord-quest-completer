@@ -35,7 +35,11 @@ export interface QuestUserStatus {
 }
 
 export interface QuestConfig {
-  application_id: string;
+  application_id?: string;
+  application?: {
+    id: string;
+    name: string;
+  };
   application_name?: string;
   title?: string;
   expires_at?: string;
