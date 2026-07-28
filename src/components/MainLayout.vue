@@ -45,7 +45,7 @@ const { isAccountModalOpen, token, activeUnfinishedQuests, autoDetectLocalToken,
                 @click="isAccountModalOpen = true"
                 class="flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold text-xs shadow-md shadow-indigo-500/20 transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer"
               >
-                <img :src="avatarUrl || 'https://cdn.discordapp.com/embed/avatars/0.png'" class="w-5 h-5 rounded-full border border-white/40 shadow-xs" />
+                <img :src="avatarUrl" @error="(e: any) => e.target.src = 'https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png'" class="w-5 h-5 rounded-full border border-white/40 shadow-xs bg-indigo-700" />
                 <span>{{ userProfile?.global_name || userProfile?.username || 'Discord Account' }}</span>
                 <span v-if="activeUnfinishedQuests.length > 0" class="ml-0.5 px-1.5 py-0.5 bg-emerald-500 text-white rounded-full text-[10px] font-bold">
                   {{ activeUnfinishedQuests.length }}

@@ -32,7 +32,7 @@
           <div class="text-center p-5 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-xl space-y-4">
             <!-- Account Profile Badge when logged in -->
             <div v-if="token && userProfile" class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600/60 rounded-xl shadow-xs">
-              <img :src="avatarUrl" class="w-11 h-11 rounded-full border-2 border-indigo-500 shadow-sm" />
+              <img :src="avatarUrl" @error="(e: any) => e.target.src = 'https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png'" class="w-11 h-11 rounded-full border-2 border-indigo-500 shadow-sm bg-indigo-700" />
               <div class="flex-1 text-left">
                 <div class="font-bold text-sm text-gray-900 dark:text-white">
                   {{ userProfile.global_name || userProfile.username }}

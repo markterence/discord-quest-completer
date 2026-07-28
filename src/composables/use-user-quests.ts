@@ -86,6 +86,9 @@ export function useUserQuests() {
   const errorMessage = ref<string | null>(null);
 
   const avatarUrl = computed(() => {
+    if (userProfile.value?.avatar && userProfile.value?.id) {
+      return `https://cdn.discordapp.com/avatars/${userProfile.value.id}/${userProfile.value.avatar}.png?size=128`;
+    }
     return `https://cdn.discordapp.com/embed/avatars/0.png`;
   });
 
