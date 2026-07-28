@@ -8,7 +8,7 @@ import IconVueJs from './IconVueJs.vue';
 
 const appState = useGlobalState();
 const { page, setPage } = appState;
-const { isAccountModalOpen, token, activeUnfinishedQuests } = useUserQuests();
+const { isAccountModalOpen, token, activeUnfinishedQuests, openLoginWindow } = useUserQuests();
 
 </script>
 
@@ -42,7 +42,7 @@ const { isAccountModalOpen, token, activeUnfinishedQuests } = useUserQuests();
             </li>
             <li>
               <button
-                @click="isAccountModalOpen = true"
+                @click="token ? (isAccountModalOpen = true) : openLoginWindow()"
                 class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold text-xs shadow-md shadow-indigo-500/20 transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer"
               >
                 <svg class="w-4 h-4 fill-current" viewBox="0 0 127.14 96.36">

@@ -28,35 +28,45 @@
 
         <!-- Content -->
         <div class="p-6 overflow-y-auto space-y-5 flex-1">
-          <!-- System Browser Login & Auto Detect Action -->
+          <!-- Main Login Actions -->
           <div class="text-center p-5 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-xl space-y-4">
             <p class="text-xs text-gray-600 dark:text-gray-300">
-              Tự động nhận diện tài khoản Discord đã mở trên máy tính hoặc trình duyệt.
+              Đăng nhập tài khoản Discord bằng Cửa sổ Trình duyệt Web (hỗ trợ Mật khẩu, 2FA & QR Code). Phiên đăng nhập sẽ được lưu tự động!
             </p>
 
-            <div class="flex flex-col gap-2">
+            <div class="flex flex-col gap-2.5">
+              <button
+                @click="openLoginWindow"
+                :disabled="isLoading"
+                class="w-full py-3 px-4 bg-[#5865F2] hover:bg-[#4752C4] disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span v-if="isLoading" class="animate-spin">🌀</span>
+                <span class="text-base">🌐</span>
+                <span>{{ isLoading ? 'Đang đợi đăng nhập...' : 'Đăng nhập tài khoản Discord (Web Window)' }}</span>
+              </button>
+
               <button
                 @click="autoDetectLocalToken"
                 :disabled="isLoading"
-                class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-xs rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span v-if="isLoading" class="animate-spin">🌀</span>
-                <span class="text-base">⚡</span>
-                <span>{{ isLoading ? 'Đang nhận diện tài khoản...' : 'Nhận diện tự động Tài khoản Discord' }}</span>
-              </button>
-
-              <button
-                @click="openDefaultBrowser('https://discord.com/app')"
-                class="w-full py-2.5 px-4 bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold text-xs rounded-lg shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span class="text-base">🌐</span>
-                <span>Mở Discord trên Trình duyệt Hệ thống</span>
+                <span class="text-sm">⚡</span>
+                <span>Hoặc Nhận diện tự động phiên Discord trên máy</span>
               </button>
             </div>
 
-            <p v-if="token" class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              ✓ Đã kết nối thành công & Đã tải danh sách Quests!
-            </p>
+            <!-- Login status -->
+            <div v-if="token" class="pt-2 border-t border-gray-200 dark:border-gray-700/60 flex items-center justify-between text-xs">
+              <span class="text-emerald-600 dark:text-emerald-400 font-medium">
+                ✓ Phiên đăng nhập đang hoạt động (Đã lưu)
+              </span>
+              <button
+                @click="handleLogout"
+                class="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-semibold underline text-[11px] cursor-pointer"
+              >
+                Đăng xuất / Đổi tài khoản khác
+              </button>
+            </div>
           </div>
 
           <!-- Error Alert -->
@@ -143,7 +153,8 @@ const {
   quests,
   isLoading,
   errorMessage,
-  openDefaultBrowser,
+  setToken,
+  openLoginWindow,
   autoDetectLocalToken,
   fetchQuests,
   activeUnfinishedQuests,
@@ -162,6 +173,12 @@ watch(() => props.isOpen, (newVal) => {
 
 function close() {
   emit('close');
+}
+
+function handleLogout() {
+  setToken('');
+  quests.value = [];
+  openLoginWindow();
 }
 
 function emitSync() {
