@@ -107,6 +107,25 @@ export function useUserQuests() {
     }
   }
 
+  async function autoDetectLocalToken() {
+    isLoading.value = true;
+    errorMessage.value = null;
+    addLog('info', 'Auto-detecting active Discord account token from local system...');
+    try {
+      const detectedToken = await invoke<string>('auto_detect_discord_token');
+      if (detectedToken) {
+        setToken(detectedToken);
+        addLog('info', 'Successfully auto-detected active Discord account session!');
+        await fetchQuests();
+      }
+    } catch (err: any) {
+      const msg = typeof err === 'string' ? err : err?.message || 'Could not auto-detect token.';
+      addLog('warning', `Local token auto-detect status: ${msg}`);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   return {
     isAccountModalOpen,
     token,
@@ -116,6 +135,7 @@ export function useUserQuests() {
     setToken,
     openLoginWindow,
     openDefaultBrowser,
+    autoDetectLocalToken,
     fetchQuests,
     activeUnfinishedQuests,
     unfinishedGameAppIds,

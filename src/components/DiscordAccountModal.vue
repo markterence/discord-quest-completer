@@ -28,22 +28,34 @@
 
         <!-- Content -->
         <div class="p-6 overflow-y-auto space-y-5 flex-1">
-          <!-- System Browser Login Action Only -->
+          <!-- System Browser Login & Auto Detect Action -->
           <div class="text-center p-5 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-xl space-y-4">
             <p class="text-xs text-gray-600 dark:text-gray-300">
-              Đăng nhập tài khoản Discord trên <strong>Trình duyệt hệ thống chính (Chrome / Edge / Firefox)</strong> để đồng bộ tự động danh sách Quest.
+              Tự động nhận diện tài khoản Discord đã mở trên máy tính hoặc trình duyệt.
             </p>
 
-            <button
-              @click="openDefaultBrowser('https://discord.com/app')"
-              class="w-full py-3 px-4 bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold text-xs rounded-xl shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span class="text-base">🌐</span>
-              <span>Đăng nhập Discord trên Trình duyệt Hệ thống</span>
-            </button>
+            <div class="flex flex-col gap-2">
+              <button
+                @click="autoDetectLocalToken"
+                :disabled="isLoading"
+                class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span v-if="isLoading" class="animate-spin">🌀</span>
+                <span class="text-base">⚡</span>
+                <span>{{ isLoading ? 'Đang nhận diện tài khoản...' : 'Nhận diện tự động Tài khoản Discord' }}</span>
+              </button>
+
+              <button
+                @click="openDefaultBrowser('https://discord.com/app')"
+                class="w-full py-2.5 px-4 bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold text-xs rounded-lg shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span class="text-base">🌐</span>
+                <span>Mở Discord trên Trình duyệt Hệ thống</span>
+              </button>
+            </div>
 
             <p v-if="token" class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-              ✓ Đã kết nối phiên làm việc & Quests Active
+              ✓ Đã kết nối thành công & Đã tải danh sách Quests!
             </p>
           </div>
 
@@ -129,8 +141,10 @@ const emit = defineEmits<{
 const {
   token,
   quests,
+  isLoading,
   errorMessage,
   openDefaultBrowser,
+  autoDetectLocalToken,
   fetchQuests,
   activeUnfinishedQuests,
   unfinishedGameAppIds,
@@ -138,7 +152,9 @@ const {
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
-    if (token.value && quests.value.length === 0) {
+    if (!token.value) {
+      autoDetectLocalToken();
+    } else if (quests.value.length === 0) {
       fetchQuests();
     }
   }

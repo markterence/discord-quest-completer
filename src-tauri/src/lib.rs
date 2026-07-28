@@ -368,6 +368,82 @@ async fn token_captured_internal(handle: AppHandle, token: String) -> Result<(),
 }
 
 
+fn is_token_candidate(s: &str) -> bool {
+    if s.starts_with("mfa.") && s.len() == 88 {
+        return true;
+    }
+    let parts: Vec<&str> = s.split('.').collect();
+    if parts.len() == 3 {
+        let p0_len = parts[0].len();
+        let p1_len = parts[1].len();
+        let p2_len = parts[2].len();
+        if (p0_len >= 24 && p0_len <= 32) && p1_len == 6 && (p2_len >= 25 && p2_len <= 45) {
+            return true;
+        }
+    }
+    false
+}
+
+fn scan_dir_for_tokens(dir: &Path, candidates: &mut Vec<String>) {
+    if !dir.exists() {
+        return;
+    }
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if let Some(ext) = path.extension() {
+                if ext == "log" || ext == "ldb" {
+                    if let Ok(bytes) = std::fs::read(&path) {
+                        let text = String::from_utf8_lossy(&bytes);
+                        for word in text.split(|c: char| !c.is_alphanumeric() && c != '.' && c != '_' && c != '-') {
+                            let cleaned = word.trim_matches('"');
+                            if is_token_candidate(cleaned) && !candidates.contains(&cleaned.to_string()) {
+                                candidates.push(cleaned.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[tauri::command(rename_all = "snake_case")]
+async fn auto_detect_discord_token() -> Result<String, String> {
+    let mut candidates = Vec::new();
+
+    if let Ok(appdata) = env::var("APPDATA") {
+        let root = Path::new(&appdata);
+        scan_dir_for_tokens(&root.join("discord").join("Local Storage").join("leveldb"), &mut candidates);
+        scan_dir_for_tokens(&root.join("discordcanary").join("Local Storage").join("leveldb"), &mut candidates);
+        scan_dir_for_tokens(&root.join("discordptb").join("Local Storage").join("leveldb"), &mut candidates);
+    }
+
+    if let Ok(localappdata) = env::var("LOCALAPPDATA") {
+        let root = Path::new(&localappdata);
+        scan_dir_for_tokens(&root.join("Google").join("Chrome").join("User Data").join("Default").join("Local Storage").join("leveldb"), &mut candidates);
+        scan_dir_for_tokens(&root.join("Microsoft").join("Edge").join("User Data").join("Default").join("Local Storage").join("leveldb"), &mut candidates);
+    }
+
+    let client = tauri_plugin_http::reqwest::Client::new();
+
+    for token in candidates {
+        let res = client
+            .get("https://discord.com/api/v10/users/@me")
+            .header("Authorization", &token)
+            .send()
+            .await;
+
+        if let Ok(response) = res {
+            if response.status().is_success() {
+                return Ok(token);
+            }
+        }
+    }
+
+    Err("No active Discord account found on local app or browser.".to_string())
+}
+
 #[tauri::command(rename_all = "snake_case")]
 async fn open_default_browser(url: String) -> Result<(), String> {
     tauri_plugin_opener::open_url(&url, None::<&str>)
@@ -393,7 +469,8 @@ pub fn run() {
             fetch_user_quests,
             open_discord_login_window,
             token_captured_internal,
-            open_default_browser
+            open_default_browser,
+            auto_detect_discord_token
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
