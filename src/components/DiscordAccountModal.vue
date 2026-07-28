@@ -96,49 +96,9 @@
             ⚠️ {{ errorMessage }}
           </div>
 
-          <!-- Quests List -->
-          <div v-if="quests.length > 0" class="space-y-3">
-            <div class="flex justify-between items-center">
-              <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                Active Quests ({{ activeUnfinishedQuests.length }} chưa hoàn thành)
-              </h4>
-              <button
-                @click="emitSync"
-                class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-md transition-colors cursor-pointer"
-              >
-                ⚡ Thêm tự động Game vào danh sách
-              </button>
-            </div>
-
-            <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
-              <div
-                v-for="quest in quests"
-                :key="quest.id"
-                class="p-3 border rounded-lg text-xs bg-gray-50 dark:bg-gray-700/40 border-gray-200 dark:border-gray-700 flex flex-col gap-1.5"
-              >
-                <div class="flex justify-between items-start">
-                  <div>
-                    <span class="font-bold text-gray-900 dark:text-white">
-                      {{ getQuestGameTitle(quest) }}
-                    </span>
-                    <p class="text-gray-500 dark:text-gray-400 text-[11px]">
-                      {{ quest.config?.messages?.quest_name || quest.config?.title || 'Quest' }}
-                    </p>
-                  </div>
-
-                  <span
-                    :class="[
-                      'px-2 py-0.5 rounded-full text-[10px] font-semibold',
-                      isCompleted(quest) 
-                        ? 'bg-green-500/20 text-green-600 dark:text-green-400' 
-                        : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
-                    ]"
-                  >
-                    {{ isCompleted(quest) ? 'Đã xong ✓' : 'Đang làm ⏳' }}
-                  </span>
-                </div>
-              </div>
-            </div>
+          <!-- Info Sync text -->
+          <div v-if="token && userProfile && quests.length > 0" class="mt-4 text-xs text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 p-2.5 rounded-lg border border-emerald-500/20 text-center">
+            Đã thêm {{ activeUnfinishedQuests.length }} games tương ứng vào danh sách.
           </div>
         </div>
 

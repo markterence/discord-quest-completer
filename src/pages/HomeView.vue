@@ -18,7 +18,7 @@ import Fuse from 'fuse.js';
 import { useGlobalState } from '@/composables/app-state';
 import TimedNotification from '@/components/TimedNotification.vue';
 import DiscordAccountModal from '@/components/DiscordAccountModal.vue';
-import { useUserQuests, getQuestAppId, getQuestGameTitle } from '@/composables/use-user-quests';
+import { useUserQuests, getQuestAppId, getQuestGameTitle, getQuestProgressPercent } from '@/composables/use-user-quests';
 
 const { isAccountModalOpen } = useUserQuests();
 
@@ -572,12 +572,49 @@ async function trackAndProgressSequence() {
             await playCurrentSequenceGame();
         } else {
             addLog('info', '🏆 All active quests completed successfully!');
+            sendSystemNotification('Discord Quest Completer', '🎉 Chúc mừng! Đã hoàn thành toàn bộ game quest trong danh sách!');
             stopAutoSequence();
         }
     } else {
         addLog('info', `⏳ [Auto-Sequence] Quest for ${currentGame.name} in progress...`);
     }
 }
+
+function getGameQuestProgress(gameId: string): number {
+    const q = quests.value.find((quest: any) => String(getQuestAppId(quest)) === String(gameId));
+    if (!q) return 0;
+    return getQuestProgressPercent(q);
+}
+
+async function stopEverything() {
+    stopAutoSequence();
+    for (const game of gameList.value) {
+        if (game.is_running && game.executables && game.executables.length > 0) {
+            await stopPlaying({ game, executable: game.executables[0] });
+        }
+    }
+}
+
+watch(token, async (newToken) => {
+    if (!newToken) {
+        await stopEverything();
+    }
+});
+
+function sendSystemNotification(title: string, body: string) {
+    if ('Notification' in window) {
+        if (Notification.permission === 'granted') {
+            new Notification(title, { body });
+        } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    new Notification(title, { body });
+                }
+            });
+        }
+    }
+}
+
 
 provide<GameActionsProvider>(GameActionsKey, {
     canPlayGame,
@@ -786,11 +823,12 @@ provide<GameActionsProvider>(GameActionsKey, {
                         :class="[
                             'px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5',
                             isAutoSequenceRunning 
-                                ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse' 
+                                ? 'bg-amber-600 hover:bg-amber-700 text-white animate-pulse' 
                                 : 'bg-emerald-600 hover:bg-emerald-700 text-white hover:scale-105 active:scale-95'
                         ]"
                     >
-                        <span>{{ isAutoSequenceRunning ? '⏹ Dừng chạy lần lượt' : '⚡ Chạy lần lượt toàn bộ Quest' }}</span>
+                        <span class="text-[10px]">{{ isAutoSequenceRunning ? '⏸' : '▶' }}</span>
+                        <span>{{ isAutoSequenceRunning ? 'Tạm dừng tự động' : 'Tự động thực hiện' }}</span>
                     </button>
                 </div>
                 <div v-if="gameList.length === 0" class="text-gray-500 dark:text-gray-400 text-center py-8">
@@ -822,10 +860,21 @@ provide<GameActionsProvider>(GameActionsKey, {
                                 Remove
                             </button>
                         </div>
-                        <div class="flex space-x-2 mt-2">
-                            <!-- Previously play button was here -->
-                            <div class="text-sm text-green-500 dark:text-green-400" v-if="game.is_running">
-                                Running
+                        
+                        <!-- Thanh tiến trình Quest -->
+                        <div class="mt-2.5">
+                            <div class="flex justify-between items-center text-[10px] text-gray-500 dark:text-gray-400 mb-1">
+                                <span class="flex items-center gap-1">
+                                    <span v-if="game.is_running" class="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+                                    <span>{{ game.is_running ? 'Đang chạy tự động' : 'Chưa chạy' }}</span>
+                                </span>
+                                <span class="font-bold text-indigo-600 dark:text-indigo-400">{{ getGameQuestProgress(game.id) }}%</span>
+                            </div>
+                            <div class="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div 
+                                    class="h-full bg-indigo-500 dark:bg-indigo-400 rounded-full transition-all duration-500" 
+                                    :style="{ width: getGameQuestProgress(game.id) + '%' }"
+                                ></div>
                             </div>
                         </div>
                     </div>

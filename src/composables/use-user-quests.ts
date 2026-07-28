@@ -33,6 +33,27 @@ export function getQuestGameTitle(q: any): string {
   );
 }
 
+export function getQuestProgressPercent(q: any): number {
+  if (!q || !q.user_status) return 0;
+  if (q.user_status.completed_at || q.user_status.claimed_at) return 100;
+  
+  const progress = q.user_status.progress;
+  if (!progress) return 0;
+
+  if (typeof progress.value === 'number' && typeof progress.max_value === 'number' && progress.max_value > 0) {
+    return Math.min(100, Math.round((progress.value / progress.max_value) * 100));
+  }
+
+  for (const key of Object.keys(progress)) {
+    const taskProgress = progress[key];
+    if (taskProgress && typeof taskProgress.value === 'number' && typeof taskProgress.max_value === 'number' && taskProgress.max_value > 0) {
+      return Math.min(100, Math.round((taskProgress.value / taskProgress.max_value) * 100));
+    }
+  }
+
+  return 0;
+}
+
 export function isPlayableWindowsGameQuest(q: any): boolean {
   if (!q || !q.config) return false;
   
