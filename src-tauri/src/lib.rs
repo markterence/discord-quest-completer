@@ -378,20 +378,30 @@ async fn token_captured_internal(handle: AppHandle, token: String) -> Result<(),
 }
 
 
-fn is_token_candidate(s: &str) -> bool {
-    if s.starts_with("mfa.") && s.len() == 88 {
-        return true;
-    }
-    let parts: Vec<&str> = s.split('.').collect();
-    if parts.len() == 3 {
-        let p0_len = parts[0].len();
-        let p1_len = parts[1].len();
-        let p2_len = parts[2].len();
-        if (p0_len >= 24 && p0_len <= 32) && p1_len == 6 && (p2_len >= 25 && p2_len <= 45) {
-            return true;
+use regex::Regex;
+
+fn extract_tokens_from_text(text: &str, candidates: &mut Vec<String>) {
+    let re_mfa = match Regex::new(r"mfa\.[a-zA-Z0-9_-]{84}") {
+        Ok(r) => r,
+        Err(_) => return,
+    };
+    let re_normal = match Regex::new(r"[a-zA-Z0-9_-]{24,32}\.[a-zA-Z0-9_-]{6}\.[a-zA-Z0-9_-]{25,45}") {
+        Ok(r) => r,
+        Err(_) => return,
+    };
+
+    for mat in re_mfa.find_iter(text) {
+        let token = mat.as_str().to_string();
+        if !candidates.contains(&token) {
+            candidates.push(token);
         }
     }
-    false
+    for mat in re_normal.find_iter(text) {
+        let token = mat.as_str().to_string();
+        if !candidates.contains(&token) {
+            candidates.push(token);
+        }
+    }
 }
 
 fn scan_dir_for_tokens(dir: &Path, candidates: &mut Vec<String>) {
@@ -415,12 +425,7 @@ fn scan_dir_for_tokens(dir: &Path, candidates: &mut Vec<String>) {
         for (_, path) in files {
             if let Ok(bytes) = std::fs::read(&path) {
                 let text = String::from_utf8_lossy(&bytes);
-                for word in text.split(|c: char| !c.is_alphanumeric() && c != '.' && c != '_' && c != '-') {
-                    let cleaned = word.trim_matches('"');
-                    if is_token_candidate(cleaned) && !candidates.contains(&cleaned.to_string()) {
-                        candidates.push(cleaned.to_string());
-                    }
-                }
+                extract_tokens_from_text(&text, candidates);
             }
         }
     }

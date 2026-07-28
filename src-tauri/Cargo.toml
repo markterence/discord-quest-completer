@@ -28,4 +28,5 @@ once_cell = "1.21.3"
 tauri-plugin-http = "2"
 tauri-plugin-dialog = "2"
 reqwest = { version = "=0.11", features = ["json", "multipart", "brotli", "gzip", "blocking"] }
+regex = "1.10"
 

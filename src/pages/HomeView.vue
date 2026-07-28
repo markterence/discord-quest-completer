@@ -462,11 +462,7 @@ const {
 
 async function autoSyncUserQuests() {
     try {
-        if (!token.value) {
-            await autoDetectLocalToken();
-        } else {
-            await fetchQuests();
-        }
+        await autoDetectLocalToken();
         if (activeUnfinishedQuests.value.length > 0) {
             handleSyncGames();
         }
