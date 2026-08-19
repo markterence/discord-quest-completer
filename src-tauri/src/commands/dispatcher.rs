@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env};
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Mutex;
 use tauri::State;
@@ -7,6 +7,7 @@ use tokio::process::Child;
 use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
 use crate::process_kill;
+use crate::platform::{self, Platform};
 use crate::event::{ExeProcessPayload, EVT_BACKGROUND_PROCESS_RESULT};
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -49,18 +50,14 @@ pub async fn launch_executable(
     executable_name: String,
     path_len: i64,
     app_id: i64,
+    platform: Option<Platform>,
 ) -> Result<String, String> {
     let app = handle.clone();
 
-    let exe_path = env::current_exe().unwrap_or_default();
-    let exe_dir = exe_path.parent().unwrap_or_else(|| Path::new(""));
-
     let normalized_path = Path::new(&path).to_string_lossy().to_string();
 
-    let game_folder_path = exe_dir
-        .join("games")
-        .join(app_id.to_string())
-        .join(&normalized_path);
+    let game_folder_path =
+        platform::resolve_game_folder(&platform.unwrap_or_default(), app_id, &normalized_path)?;
     let executable_path = game_folder_path.join(&executable_name);
 
     let normalized_path_clone = normalized_path.clone();
@@ -144,7 +141,7 @@ pub async fn launch_executable(
             };
             let error_payload_json = serde_json::to_value(&error_payload).unwrap();
             handle
-                .emit("background_process_result", error_payload_json)
+                .emit(EVT_BACKGROUND_PROCESS_RESULT, error_payload_json)
                 .unwrap_or_else(|e| eprintln!("Failed to emit event: {}", e));
             Err(format!("Failed to launch executable: {}", e))
         }
