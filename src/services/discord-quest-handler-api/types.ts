@@ -5,6 +5,7 @@ export type RunBackgroundProcessPayload = {
     path_len?: Number | undefined;
     app_id: number;
     exec_path: string;
+    platform?: 'standalone' | 'steam';
 }
 
 // Events

@@ -17,6 +17,14 @@ const COMMANDS = {
     getEmbeddedGamelist(): Promise<string> {
         return invoke('get_embedded_gamelist');
     },
+
+    fetchGameListFromGithubPages() {
+        return invoke("fetch_gamelist_gh_mirror")
+    },
+
+    fetchGameListFromDiscord() {
+        return invoke("fetch_gamelist_from_discord")
+    }
 }
 
 export default COMMANDS;
