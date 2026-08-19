@@ -5,11 +5,14 @@ use std::path::Path;
 use std::sync::Mutex;
 use tauri::{path::BaseDirectory, AppHandle, Emitter, Listener, Manager};
 
+use crate::commands::dispatcher::GameDispatcherState;
+
 mod rpc;
 mod runner;
 mod commands;
 mod event;
 mod process_kill;
+mod platform;
 
 // Global static instance of the Discord client
 static DISCORD_CLIENT: OnceCell<Mutex<Option<rpc::Client>>> = OnceCell::new();
@@ -207,6 +210,9 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
+        .manage(commands::dispatcher::GameDispatcherState(Mutex::new(
+                std::collections::HashMap::new(),
+        )))
         .invoke_handler(tauri::generate_handler![
             greet,
             create_fake_game,
