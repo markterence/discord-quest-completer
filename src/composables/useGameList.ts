@@ -1,6 +1,6 @@
 import { createGlobalState, useStorage, watchOnce } from '@vueuse/core'
 import { computed, ref, watch, type Ref } from 'vue'
-import type { Game } from '@/types/types'
+import type { Game, GameExecutable } from '@/types/types'
 import { randomString } from '@/utils/random-string'
 import { APP_SETTINGS_KEYS } from '@/constants/storage-keys'
 
@@ -10,9 +10,14 @@ export interface UseGameListReturn {
   selectedGame: Ref<Game | null>
   addGame: (game: Game) => void
   removeGame: (game: Game) => void
-  selectGame: (game: Game | null) => void
+  selectGame: (game: Game | null) => void,
+  getExecutableByName: (game: Game | null | undefined, exeName: string) => GameExecutable | undefined,
+  getExecutableByPath: (game: Game | null | undefined, execPath: string) => GameExecutable | undefined,
   initializeWithGameDB: (gameDB: Ref<Game[]>, allFetchDone: Ref<boolean>) => void
+  updateExecutableRunStatus: (execPath: string, runStatus: boolean) => void
 }
+
+const toPathId = (p: string) => p.split(/\\|\//).join(''); 
 
 export const useGameList = createGlobalState(() => {
   // Persistent storage for game IDs
@@ -52,7 +57,47 @@ export const useGameList = createGlobalState(() => {
       selectedGameId.value = null
     }
   }
+
+  function getExecutableByName(game: Game | null | undefined, exeName: string) {
+      return game?.executables.find(exe => exe.name === exeName);
+  }
   
+  function getGameByExecutable(execPath: string) {
+      console.log('getGameByExecutable', toPathId(execPath))
+      return gameList.value.find(g => g.executables.some(exe => {
+          console.log(`getGameByExecutable..name`,toPathId(exe.name))
+          return toPathId(exe.name) === toPathId(execPath);
+      }));
+  }
+  
+  function getExecutableByPath(game: Game | null | undefined, execPath: string) {
+      console.log('getExecutableByPath', {
+          execPath,
+          toPathId: toPathId(execPath),
+          game,
+      }) 
+      const gameExec = game?.executables.find(exe => toPathId(exe.name!) === toPathId(execPath));
+      
+      return gameExec;
+  }
+   function updateExecutableRunStatus(execPath: string, runStatus: boolean) {
+        const gameToUpdate = getGameByExecutable(execPath);
+        console.log('updateExecutableRunStatus.gameToUpdate', gameToUpdate)
+        if(gameToUpdate) {
+            try {
+                console.log('updateExecutableRunStatus.execPath', execPath)
+                const executable = getExecutableByPath(gameToUpdate, execPath);
+                console.log('updateExecutableRunStatus.executable', executable)
+                if (executable) {
+                    executable['is_running'] = runStatus;
+                }
+                console.log('executable after update', executable)
+            } catch (error) {
+                console.error('Error updating executable run status:', error);
+            }
+        }
+    }
+
   // Select a game
   function selectGame(game: Game | null) {
     selectedGameId.value = game?.uid || null
@@ -83,6 +128,8 @@ export const useGameList = createGlobalState(() => {
       }
     })
   }
+
+
   
   // Auto-save game IDs when game list changes
   watch(
@@ -101,5 +148,8 @@ export const useGameList = createGlobalState(() => {
     removeGame,
     selectGame,
     initializeWithGameDB,
+    getExecutableByName,
+    getExecutableByPath,
+    updateExecutableRunStatus
   } as UseGameListReturn
 })
