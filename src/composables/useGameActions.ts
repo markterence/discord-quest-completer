@@ -6,6 +6,7 @@ import { path } from '@tauri-apps/api'
 import { emit, listen } from '@tauri-apps/api/event'
 import { useGameList } from './useGameList'
 import { useGlobalState } from './app-state'
+import { DiscordQuestHandlerAPI } from '@/services/discord-quest-handler-api'
 
 export interface UseGameActionsReturn {
   currentlyPlaying: Ref<string | null>
@@ -26,7 +27,7 @@ export interface UseGameActionsReturn {
 
 export const useGameActions = createGlobalState(() => {
   // Get game list state
-  const { gameList } = useGameList()
+  const { gameList, updateExecutableRunStatus } = useGameList()
   const { addLog } = useGlobalState()
   
   // RPC and game state
@@ -54,7 +55,7 @@ export const useGameActions = createGlobalState(() => {
   function isGameExecutableInstalled(executable: GameExecutable) {
     return executable.is_installed ?? false
   }
-  
+
   function isGameInstalled(game: Game | null) {
     if (!game) return false
     return game.is_installed ?? false
@@ -119,9 +120,10 @@ export const useGameActions = createGlobalState(() => {
           executable_name: executable.filename,
           path_len: executable.segments,
           app_id: Number(gameToPlay.id),
-          exec_path: path.join(executable.path!, executable.filename!),
+          exec_path: await path.join(executable.path!, executable.filename!),
         }
-        await invoke('run_background_process', payload)
+        // await invoke('run_background_process', payload)
+        await DiscordQuestHandlerAPI.launchExecutable(payload);
         gameToPlay.is_running = true
         executableItem.is_running = true
       }
@@ -144,9 +146,10 @@ export const useGameActions = createGlobalState(() => {
     
     if (gameToPlay && executableItem) {
       try {
-        await invoke('stop_process', {
-          exec_name: executable.filename!,
-        })
+        // await invoke('stop_process', {
+        //   exec_name: executable.filename!,
+        // })
+        await DiscordQuestHandlerAPI.stopExecutable(Number(game.id));
         addLog('info', `Stopped game process: ${game.name}`)
         addLog('info', `Stopped Executable: ${executable.name}`)
       } catch (error) {
@@ -224,18 +227,20 @@ export const useGameActions = createGlobalState(() => {
       console.error('No payload received from background process exit event')
       return
     }
-    console.log('Background process status:', event.payload)
+    console.log('[EVENT] Background process status:', event.payload)
     const payload = event.payload
     
     // Update executable running status based on full_executable_path
-    gameList.value.forEach(game => {
-      game.executables.forEach(exe => {
-        const fullPath = path.join(exe.path || '', exe.filename || '')
-        if (fullPath === payload.full_executable_path) {
-          exe.is_running = payload.running
-        }
-      })
-    })
+    updateExecutableRunStatus(payload.full_executable_path, payload.running)
+    // gameList.value.forEach(game => {
+    //   game.executables.forEach(exe => {
+    //     const fullPath = path.join(exe.path || '', exe.filename || '')
+    //     if (fullPath === payload.full_executable_path) {
+    //       exe.is_running = payload.running
+    //     }
+    //   })
+    // })
+
   }).then(unlisten => {
     unlistenFns.push(unlisten)
   })
