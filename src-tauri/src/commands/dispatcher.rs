@@ -6,6 +6,7 @@ use tauri::{Emitter, Manager};
 use tokio::process::Child;
 use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
 
+use crate::process_kill;
 use crate::event::{ExeProcessPayload, EVT_BACKGROUND_PROCESS_RESULT};
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -16,6 +17,23 @@ pub struct DispatchedItem {
     pub pid: Option<u32>,
     #[serde(skip)]
     pub child: Option<Child>
+}
+
+impl DispatchedItem {
+    // Converts this DispatchedItem into the ExeProcessPayload emitted to the
+    // frontend via EVT_BACKGROUND_PROCESS_RESULT.
+    // e.g. item.to_payload(None, false, None, None) for a stopped process.
+    fn to_payload(&self, pid: Option<u32>, running: bool, status: Option<i32>, error: Option<String>) -> ExeProcessPayload {
+        ExeProcessPayload {
+            app_id: self.app_id.to_string(),
+            executable_name: self.executable_name.clone(),
+            full_executable_path: self.full_executable_path.clone(),
+            pid,
+            running,
+            status,
+            error,
+        }
+    }
 }
 
 pub struct GameDispatcherState (pub Mutex<HashMap<i64, DispatchedItem>>);
@@ -62,16 +80,16 @@ pub async fn launch_executable(
         Ok(spawned_process) => {
             let pid = spawned_process.id();
 
-            let running_payload = ExeProcessPayload {
-                app_id: app_id.to_string(),
+            let dispatched_item = DispatchedItem {
+                app_id: app_id.clone(),
                 executable_name: executable_name.clone(),
                 full_executable_path: full_executable_path.clone(),
-                pid: pid,
-                running: true,
-                status: None,
-                error: None,
+                pid: pid.clone(),
+                child: Some(spawned_process),
             };
+
             // Emit to tell the frontend that the process is running with the PID
+            let running_payload = dispatched_item.to_payload(pid, true, None, None);
             let running_payload_json = serde_json::to_value(&running_payload).unwrap();
             handle
                 .emit(EVT_BACKGROUND_PROCESS_RESULT, running_payload_json)
@@ -79,16 +97,7 @@ pub async fn launch_executable(
 
             {
                 let mut map = state.0.lock().unwrap();
-                map.insert(
-                    app_id.clone(),
-                    DispatchedItem {
-                        app_id: app_id.clone(),
-                        executable_name: executable_name.clone(),
-                        full_executable_path: full_executable_path.clone(),
-                        pid: pid.clone(),
-                        child: Some(spawned_process),
-                    }
-                );
+                map.insert(app_id.clone(), dispatched_item);
             }
  
             tokio::spawn(async move {
@@ -163,20 +172,7 @@ fn stop_dispatched_item(item: &DispatchedItem) -> Result<(), String> {
         println!("process name: {}, path: {}", proc_name, proc_path);
         if proc_path.eq_ignore_ascii_case(&item.executable_name) {
             // Kill by PID not by name
-            let output =  std::process::Command::new("taskkill")
-                .arg("/F")
-                .arg("/PID")
-                .arg(pid.to_string())
-                .output()
-                .map_err(|e| format!("Failed to execute taskkill: {}", e))?;
-            if output.status.success() {
-                Ok(())
-            } else {
-                Err(format!(
-                    "Failed to stop process: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                ))
-            }
+            process_kill::kill_process(pid)
         } else {
             Err(format!(
                 "Process info mismatch (wanted name: '{}', path: '{}', pid: '{}'), found name: '{}', path: '{}'",
@@ -209,15 +205,7 @@ pub async fn stop_executable(handle: tauri::AppHandle ,state: State<'_, GameDisp
     stop_dispatched_item(&item)?;
 
     // Prepare the payload to emit to the frontend
-    let stopped_payload = ExeProcessPayload {
-        app_id: x.to_string(),
-        executable_name: item.executable_name,  
-        full_executable_path: item.full_executable_path,
-        pid: None,
-        running: false,
-        status: None,
-        error: None,
-    };
+    let stopped_payload = item.to_payload(None, false, None, None);
     let stopped_payload_json = serde_json::to_value(&stopped_payload).unwrap();
     app_handle
         .emit(EVT_BACKGROUND_PROCESS_RESULT, stopped_payload_json)

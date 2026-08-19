@@ -8,6 +8,8 @@ use tauri::{path::BaseDirectory, AppHandle, Emitter, Listener, Manager};
 mod rpc;
 mod runner;
 mod commands;
+mod event;
+mod process_kill;
 
 // Global static instance of the Discord client
 static DISCORD_CLIENT: OnceCell<Mutex<Option<rpc::Client>>> = OnceCell::new();
@@ -213,6 +215,8 @@ pub fn run() {
             run_background_process,
             commands::api::fetch_gamelist_gh_mirror,
             commands::api::fetch_gamelist_from_discord,
+            commands::dispatcher::launch_executable,
+            commands::dispatcher::stop_executable
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
