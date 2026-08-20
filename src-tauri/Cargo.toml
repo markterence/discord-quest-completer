@@ -1,8 +1,8 @@
 [package]
 name = "discord-quest-completer"
 version = "25.10.7"
-description = "A Tauri App"
-authors = ["you"]
+description = "A Tauri App to complete Discord Orb Quest"
+authors = ["https://github.com/markterence"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
