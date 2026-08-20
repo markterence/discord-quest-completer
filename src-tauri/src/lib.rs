@@ -429,18 +429,6 @@ fn connect_to_discord_rpc_3(handle: AppHandle, activity_json: String, action: St
     });
 }
 
-#[tauri::command(rename_all = "snake_case")]
-async fn fetch_gamelist_gh_mirror() -> tauri::ipc::Response {
-    let res = tauri_plugin_http::reqwest::get("https://markterence.github.io/discord-quest-completer/detectable.json").await;
-    tauri::ipc::Response::new(res.unwrap().text().await.unwrap())
-}
-
-#[tauri::command(rename_all = "snake_case")]
-async fn fetch_gamelist_from_discord() -> tauri::ipc::Response {
-    let res = tauri_plugin_http::reqwest::get("https://discord.com/api/applications/detectable").await;
-    tauri::ipc::Response::new(res.unwrap().text().await.unwrap())
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() { 
     tauri::Builder::default()
