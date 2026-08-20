@@ -52,7 +52,8 @@ pub async fn launch_executable(
     app_id: i64,
     platform: Option<Platform>,
 ) -> Result<String, String> {
-    let app = handle.clone();
+    let _app = handle.clone();
+    let _path_len = path_len;
 
     let normalized_path = Path::new(&path).to_string_lossy().to_string();
 
