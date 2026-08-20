@@ -1,0 +1,189 @@
+<template>
+  <Transition
+    enter-active-class="transition opacity-100 duration-200"
+    leave-active-class="transition opacity-0 duration-150"
+  >
+    <div
+      v-if="isOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+    >
+      <div
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/80">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🌐</span>
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+              Discord Account Quests
+            </h3>
+          </div>
+          <button
+            @click="close"
+            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold p-1 rounded-lg cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 overflow-y-auto space-y-5 flex-1">
+          <!-- Main Login Actions -->
+          <div class="text-center p-5 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 rounded-xl space-y-4">
+            <!-- Account Profile Badge when logged in -->
+            <div v-if="token && userProfile" class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600/60 rounded-xl shadow-xs">
+              <DiscordLogoIcon class="w-11 h-11 border-2 border-indigo-500 shadow-sm shrink-0" />
+              <div class="flex-1 text-left">
+                <div class="font-bold text-sm text-gray-900 dark:text-white">
+                  {{ userProfile.global_name || userProfile.username }}
+                </div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">
+                  @{{ userProfile.username }}
+                </div>
+              </div>
+              <button
+                @click="handleReload"
+                :disabled="isLoading"
+                class="text-xs bg-[#5865F2] hover:bg-[#4752C4] disabled:opacity-50 text-white px-3 py-1.5 rounded-lg font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                <span :class="{'animate-spin': isLoading}">🔄</span>
+                <span>Reload</span>
+              </button>
+            </div>
+
+            <div v-else class="flex flex-col gap-2.5">
+              <p class="text-xs text-gray-600 dark:text-gray-300">
+                Tự động đồng bộ tài khoản và danh sách Quest từ phần mềm <strong>Discord Desktop App</strong> đang mở trên máy tính của bạn.
+              </p>
+
+              <button
+                @click="autoDetectLocalToken"
+                :disabled="isLoading"
+                class="w-full py-3 px-4 bg-[#5865F2] hover:bg-[#4752C4] disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span v-if="isLoading" class="animate-spin">🌀</span>
+                <span class="text-base">⚡</span>
+                <span>{{ isLoading ? 'Đang nhận diện tài khoản...' : 'Đồng bộ từ Discord Desktop App' }}</span>
+              </button>
+
+              <div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700/50">
+                <button 
+                  @click="showManualInput = !showManualInput" 
+                  class="text-[11px] text-[#5865F2] hover:underline font-semibold cursor-pointer"
+                >
+                  {{ showManualInput ? 'Ẩn nhập thủ công' : 'Nhập token thủ công' }}
+                </button>
+                <div v-if="showManualInput" class="mt-2 flex gap-1.5">
+                  <input 
+                    v-model="manualToken" 
+                    type="password" 
+                    placeholder="Nhập Discord Token vào đây..." 
+                    class="flex-1 text-xs px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                  />
+                  <button 
+                    @click="submitManualToken"
+                    class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-bold cursor-pointer"
+                  >
+                    Lưu
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error Alert -->
+          <div v-if="errorMessage" class="p-3 bg-red-500/10 border border-red-500/30 text-red-500 dark:text-red-400 text-xs rounded-lg">
+            ⚠️ {{ errorMessage }}
+          </div>
+
+          <!-- Info Sync text -->
+          <div v-if="token && userProfile && quests.length > 0" class="mt-4 text-xs text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 p-2.5 rounded-lg border border-emerald-500/20 text-center">
+            Đã thêm {{ activeUnfinishedQuests.length }} games tương ứng vào danh sách.
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 flex justify-end gap-2">
+          <button
+            @click="close"
+            class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</template>
+
+<script setup lang="ts">
+import { watch, ref } from 'vue';
+import DiscordLogoIcon from './DiscordLogoIcon.vue';
+import { useUserQuests, getQuestGameTitle } from '@/composables/use-user-quests';
+import type { DiscordQuest } from '@/types/types';
+
+const showManualInput = ref(false);
+const manualToken = ref('');
+
+const props = defineProps<{
+  isOpen: boolean;
+}>();
+
+const emit = defineEmits<{
+  (e: 'close'): void;
+  (e: 'sync-games', appIds: string[]): void;
+}>();
+
+const {
+  token,
+  quests,
+  userProfile,
+  avatarUrl,
+  isLoading,
+  errorMessage,
+  setToken,
+  openLoginWindow,
+  autoDetectLocalToken,
+  fetchQuests,
+  activeUnfinishedQuests,
+  unfinishedGameAppIds,
+} = useUserQuests();
+
+watch(() => props.isOpen, (newVal) => {
+  if (newVal) {
+    if (!token.value) {
+      autoDetectLocalToken();
+    } else if (quests.value.length === 0) {
+      fetchQuests();
+    }
+  }
+});
+
+function close() {
+  emit('close');
+}
+
+async function handleReload() {
+  setToken('');
+  quests.value = [];
+  await autoDetectLocalToken();
+  emitSync();
+}
+
+function emitSync() {
+  emit('sync-games', unfinishedGameAppIds.value);
+}
+
+async function submitManualToken() {
+  if (!manualToken.value.trim()) return;
+  setToken(manualToken.value);
+  showManualInput.value = false;
+  manualToken.value = '';
+  await fetchQuests();
+  emitSync();
+}
+
+function isCompleted(quest: DiscordQuest): boolean {
+  return Boolean(quest.user_status?.completed_at || quest.user_status?.claimed_at);
+}
+</script>

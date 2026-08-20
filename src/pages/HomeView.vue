@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, useTemplateRef, shallowRef, provide, nextTick, triggerRef } from 'vue';
+import { ref, computed, useTemplateRef, shallowRef, provide, nextTick, triggerRef, watch } from 'vue';
 // import gameListData from '../assets/gamelist.json';
-import { onClickOutside, refDebounced, tryOnMounted } from '@vueuse/core';
+import { onClickOutside, refDebounced, tryOnMounted, tryOnUnmounted } from '@vueuse/core';
 import { useFuse } from '@vueuse/integrations/useFuse'
 import { invoke } from '@tauri-apps/api/core';
 import { randomString } from '@/utils/random-string';
@@ -17,7 +17,10 @@ import { UseFuseOptions } from '@vueuse/integrations';
 import Fuse from 'fuse.js';
 import { useGlobalState } from '@/composables/app-state';
 import TimedNotification from '@/components/TimedNotification.vue';
+import DiscordAccountModal from '@/components/DiscordAccountModal.vue';
+import { useUserQuests, getQuestAppId, getQuestGameTitle, getQuestProgressPercent } from '@/composables/use-user-quests';
 
+const { isAccountModalOpen } = useUserQuests();
 
 type DialogKey = 
     'none' | 
@@ -126,16 +129,74 @@ function openSearchResults() {
     searchResultsIsOpen.value = true;
 }
 
+// Generate a fallback executable name from game name
+// e.g. "Shift at Midnight" → "ShiftAtMidnight.exe"
+function generateFallbackExecutable(game: Game): GameExecutable {
+    const sanitized = game.name
+        .replace(/[^a-zA-Z0-9\s]/g, '') // remove special chars
+        .split(/\s+/)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join('');
+    const exeName = `${sanitized}.exe`;
+    return {
+        name: exeName,
+        os: 'win32',
+        is_launcher: false,
+    };
+}
+
 // Function to add a game to the selected list
 function addGameToList(game: Game) {
     if (!gameList.value.some(g => g.id === game.id)) {
+        // Inject fallback executable if game has no executables
+        const executables = (!game.executables || game.executables.length === 0)
+            ? [generateFallbackExecutable(game)]
+            : game.executables;
         gameList.value.push({
             uid: randomString(),
-            ...game
+            ...game,
+            executables,
         });
     }
 
     closeSearchResults();
+}
+
+function handleSyncGames() {
+    if (!activeUnfinishedQuests.value || activeUnfinishedQuests.value.length === 0) {
+        addLog('info', 'No active unfinished quests found to sync.');
+        return;
+    }
+    let addedCount = 0;
+    activeUnfinishedQuests.value.forEach(quest => {
+        const appId = getQuestAppId(quest);
+        if (!appId) return;
+
+        const title = getQuestGameTitle(quest);
+        
+        let found: Game | undefined = gameDB.value.find(g => String(g.id) === String(appId));
+        if (!found) {
+            found = {
+                id: appId,
+                name: title,
+                executables: [],
+            };
+        }
+        
+        const alreadyInList = gameList.value.some(g => String(g.id) === String(appId));
+        if (!alreadyInList) {
+            addGameToList(found);
+            addedCount++;
+        }
+    });
+
+    addLog('info', `Auto-added ${addedCount} quest games directly to the game list.`);
+    
+    if (!selectedGameId.value && gameList.value.length > 0) {
+        selectedGameId.value = gameList.value[0].uid;
+    }
+
+    isAccountModalOpen.value = false;
 }
 
 const forceRerenderKey = ref(0); 
@@ -242,6 +303,20 @@ async function playGame({game, executable}: {game: Game, executable: GameExecuta
         const gameToPlay = gameList.value.find(g => g.uid === gameUid);
         const executableItem = gameToPlay?.executables.find(exe => exe.name === executable.name);
         if (gameToPlay && executableItem) {
+            // Check if game has Steam SKU and create manifest if available
+            const steamSku = (game as any).third_party_skus?.find((s: any) => s.distributor === 'steam');
+            if (steamSku && steamSku.id) {
+                try {
+                    await invoke('create_steam_appmanifest', {
+                        steam_appid: String(steamSku.id),
+                        name: game.name,
+                    });
+                    addLog('info', `Created Steam AppManifest for ${game.name} (AppID: ${steamSku.id})`);
+                } catch (e) {
+                    console.warn('Failed to create Steam manifest:', e);
+                }
+            }
+
             const payload =  { 
                 name: game.name,
                 path: executable.path,
@@ -373,6 +448,192 @@ function hideDialog() {
     dialogRef.value?.close(); 
     dialogMessage.value = '';
     isDialogOpen.value = false;
+}
+
+
+const {
+    token,
+    autoDetectLocalToken,
+    fetchQuests,
+    quests,
+    activeUnfinishedQuests,
+    unfinishedGameAppIds
+} = useUserQuests();
+
+async function autoSyncUserQuests() {
+    try {
+        await autoDetectLocalToken();
+        if (activeUnfinishedQuests.value.length > 0) {
+            handleSyncGames();
+        }
+    } catch (e) {
+        console.warn('Realtime quest sync warning:', e);
+    }
+}
+
+// Automatically trigger quest sync on startup
+tryOnMounted(() => {
+    autoSyncUserQuests();
+});
+
+// Watch when activeUnfinishedQuests or gameDB updates to auto-add games directly into the Games panel!
+watch([activeUnfinishedQuests, gameDB], ([newQuests]) => {
+    if (newQuests && newQuests.length > 0) {
+        handleSyncGames();
+    }
+}, { immediate: true, deep: true });
+
+async function handleRefetchGameList() {
+    await fetchGameList();
+    await autoSyncUserQuests();
+}
+
+const isAutoSequenceRunning = ref(false);
+const autoSequenceIndex = ref(0);
+let autoSequenceInterval: any = null;
+
+async function toggleAutoSequence() {
+    if (isAutoSequenceRunning.value) {
+        stopAutoSequence();
+    } else {
+        await startAutoSequence();
+    }
+}
+
+async function startAutoSequence() {
+    if (gameList.value.length === 0) {
+        addLog('info', 'No games in list to run sequentially.');
+        return;
+    }
+    isAutoSequenceRunning.value = true;
+    autoSequenceIndex.value = 0;
+    addLog('info', '🚀 Started Auto-Sequence Execution for all quest games!');
+    await playCurrentSequenceGame();
+    
+    // Start tracking progress every 5 seconds
+    if (autoSequenceInterval) clearInterval(autoSequenceInterval);
+    autoSequenceInterval = setInterval(trackAndProgressSequence, 5000);
+}
+
+function stopAutoSequence() {
+    isAutoSequenceRunning.value = false;
+    if (autoSequenceInterval) {
+        clearInterval(autoSequenceInterval);
+        autoSequenceInterval = null;
+    }
+    addLog('info', '⏹️ Stopped Auto-Sequence Execution.');
+}
+
+// Poll every 5 seconds if any game is running to update the progress bar in real time!
+let manualTrackingInterval: any = null;
+
+tryOnMounted(() => {
+    manualTrackingInterval = setInterval(async () => {
+        if (!isAutoSequenceRunning.value && gameList.value.some(g => g.is_running)) {
+            try {
+                if (token.value) {
+                    await fetchQuests();
+                }
+            } catch (e) {
+                console.warn('Manual game tracking error:', e);
+            }
+        }
+    }, 5000);
+});
+
+tryOnUnmounted(() => {
+    if (manualTrackingInterval) clearInterval(manualTrackingInterval);
+});
+
+async function playCurrentSequenceGame() {
+    if (!isAutoSequenceRunning.value) return;
+    if (gameList.value.length === 0 || autoSequenceIndex.value >= gameList.value.length) {
+        addLog('info', '🎉 All quest games in list completed!');
+        stopAutoSequence();
+        return;
+    }
+    const currentGame = gameList.value[autoSequenceIndex.value];
+    selectedGameId.value = currentGame.uid;
+    addLog('info', `🎮 [Auto-Sequence] Playing game ${autoSequenceIndex.value + 1}/${gameList.value.length}: ${currentGame.name}`);
+    if (currentGame.executables && currentGame.executables.length > 0) {
+        await playGame({ game: currentGame, executable: currentGame.executables[0] });
+    }
+}
+
+async function trackAndProgressSequence() {
+    if (!isAutoSequenceRunning.value || gameList.value.length === 0) return;
+    
+    // Fetch latest quests status from Discord API
+    await fetchQuests();
+    
+    const currentGame = gameList.value[autoSequenceIndex.value];
+    if (!currentGame) return;
+
+    // Check if the quest for currentGame is finished
+    const currentQuest = quests.value.find((q: any) => String(getQuestAppId(q)) === String(currentGame.id));
+    
+    const isFinished = !currentQuest || 
+        Boolean(currentQuest.user_status?.completed_at || currentQuest.user_status?.claimed_at);
+
+    if (isFinished) {
+        addLog('info', `✅ Quest for ${currentGame.name} COMPLETED! Auto-removing game...`);
+        
+        // Stop process for current game
+        if (currentGame.executables && currentGame.executables.length > 0) {
+            await stopPlaying({ game: currentGame, executable: currentGame.executables[0] });
+        }
+        
+        // Remove game from list
+        removeGameFromList(currentGame);
+        
+        if (gameList.value.length > 0) {
+            if (autoSequenceIndex.value >= gameList.value.length) {
+                autoSequenceIndex.value = 0;
+            }
+            await playCurrentSequenceGame();
+        } else {
+            addLog('info', '🏆 All active quests completed successfully!');
+            sendSystemNotification('Discord Quest Completer', '🎉 Chúc mừng! Đã hoàn thành toàn bộ game quest trong danh sách!');
+            stopAutoSequence();
+        }
+    } else {
+        addLog('info', `⏳ [Auto-Sequence] Quest for ${currentGame.name} in progress...`);
+    }
+}
+
+function getGameQuestProgress(gameId: string): number {
+    const q = quests.value.find((quest: any) => String(getQuestAppId(quest)) === String(gameId));
+    if (!q) return 0;
+    return getQuestProgressPercent(q);
+}
+
+async function stopEverything() {
+    stopAutoSequence();
+    for (const game of gameList.value) {
+        if (game.is_running && game.executables && game.executables.length > 0) {
+            await stopPlaying({ game, executable: game.executables[0] });
+        }
+    }
+}
+
+watch(token, async (newToken) => {
+    if (!newToken) {
+        await stopEverything();
+    }
+});
+
+function sendSystemNotification(title: string, body: string) {
+    if ('Notification' in window) {
+        if (Notification.permission === 'granted') {
+            new Notification(title, { body });
+        } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    new Notification(title, { body });
+                }
+            });
+        }
+    }
 }
 
 
@@ -521,12 +782,12 @@ provide<GameActionsProvider>(GameActionsKey, {
                     class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white"
                     @focus="openSearchResults" @blur="handleSearchBlur" />
 
-                <!-- buttons to refetch game list -->
+                <!-- button to refetch game list -->
                 <button
-                    @click="fetchGameList()"
-                    class="absolute right-0 top-1/2 transform -translate-y-1/2 px-3 mr-2 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-white rounded-md">
+                    @click="handleRefetchGameList()"
+                    class="absolute right-0 top-1/2 transform -translate-y-1/2 px-3 mr-2 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-white rounded-md cursor-pointer">
                     <span class="wrap whitespace-nowrap text-xs">
-                        Refetch Game List
+                        Refetch Game List & Quests
                     </span>
                 </button>   
                </div>
@@ -575,9 +836,22 @@ provide<GameActionsProvider>(GameActionsKey, {
             <!-- Left Column: Selected Games (scrollable) -->
             <!--  max-h-[70vh] overflow-y-auto : add these somewhere to just scroll the content  -->
             <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                <h2
-                    class="text-xl font-bold text-gray-900 dark:text-white mb-4 sticky top-0 bg-white dark:bg-gray-800 py-2 z-10">
-                    Games</h2>
+                <div class="flex justify-between items-center mb-4 sticky top-0 bg-white dark:bg-gray-800 py-2 z-10">
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">Games</h2>
+                    <button
+                        @click="toggleAutoSequence"
+                        :disabled="gameList.length === 0"
+                        :class="[
+                            'px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5',
+                            isAutoSequenceRunning 
+                                ? 'bg-amber-600 hover:bg-amber-700 text-white animate-pulse' 
+                                : 'bg-emerald-600 hover:bg-emerald-700 text-white hover:scale-105 active:scale-95'
+                        ]"
+                    >
+                        <span class="text-[10px]">{{ isAutoSequenceRunning ? '⏸' : '▶' }}</span>
+                        <span>{{ isAutoSequenceRunning ? 'Tạm dừng tự động' : 'Tự động thực hiện' }}</span>
+                    </button>
+                </div>
                 <div v-if="gameList.length === 0" class="text-gray-500 dark:text-gray-400 text-center py-8">
                     No games selected. Search and add games from the search bar.
                 </div>
@@ -607,10 +881,21 @@ provide<GameActionsProvider>(GameActionsKey, {
                                 Remove
                             </button>
                         </div>
-                        <div class="flex space-x-2 mt-2">
-                            <!-- Previously play button was here -->
-                            <div class="text-sm text-green-500 dark:text-green-400" v-if="game.is_running">
-                                Running
+                        
+                        <!-- Thanh tiến trình Quest -->
+                        <div class="mt-2.5">
+                            <div class="flex justify-between items-center text-[10px] text-gray-500 dark:text-gray-400 mb-1">
+                                <span class="flex items-center gap-1">
+                                    <span v-if="game.is_running" class="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+                                    <span>{{ game.is_running ? 'Đang chạy tự động' : 'Chưa chạy' }}</span>
+                                </span>
+                                <span class="font-bold text-indigo-600 dark:text-indigo-400">{{ getGameQuestProgress(game.id) }}%</span>
+                            </div>
+                            <div class="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div 
+                                    class="h-full bg-indigo-500 dark:bg-indigo-400 rounded-full transition-all duration-500" 
+                                    :style="{ width: getGameQuestProgress(game.id) + '%' }"
+                                ></div>
                             </div>
                         </div>
                     </div>
@@ -718,6 +1003,13 @@ provide<GameActionsProvider>(GameActionsKey, {
                 </div>
             </div>
         </div>
+
+        <!-- Discord Account Quests Modal -->
+        <DiscordAccountModal
+            :is-open="isAccountModalOpen"
+            @close="isAccountModalOpen = false"
+            @sync-games="handleSyncGames"
+        />
     </div>
 </template>
 

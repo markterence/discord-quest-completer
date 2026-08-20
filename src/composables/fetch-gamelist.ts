@@ -82,20 +82,20 @@ export function useFetchGameList() {
     async function fetchGameList() { 
         allFetchDone.value = false;
         addLog('Fetching game list...');
-        // try fetching from the Github mirror first, then Discord. Use bundled as fallback.
+        // Priority: Discord API first, then GitHub mirror fallback. Bundled as last resort.
         try {
-           await Promise.all([executeGH(), executeBundled()]);
+           await Promise.all([executeDiscord(), executeBundled()]);
         } catch {
-            addLog('error', 'Error executing fetch for GitHub mirror or bundled game list.');
+            addLog('error', 'Error executing fetch for Discord API or bundled game list.');
         }
 
-        if (errorGH.value) { 
-            fetchError.value = 'Error fetching game list from GitHub mirror.';
-            addLog('error','Error fetching game list from GitHub mirror');
-            await executeDiscord();
-            if (errorDiscord.value) {
-                fetchError.value = 'Error fetching game list from Discord.';
-                addLog('error','Error fetching game list from Discord:');
+        if (errorDiscord.value) { 
+            fetchError.value = 'Error fetching game list from Discord API.';
+            addLog('error','Error fetching game list from Discord API');
+            await executeGH();
+            if (errorGH.value) {
+                fetchError.value = 'Error fetching game list from GitHub mirror.';
+                addLog('error','Error fetching game list from GitHub mirror:');
                 if (errorBundled.value) {
                     fetchError.value = 'Error fetching bundled game list.';
                     addLog('error','Error fetching bundled game list:');
@@ -117,15 +117,16 @@ export function useFetchGameList() {
             });
         }
 
-        if (gameListGHMirror.value && gameListGHMirror.value?.length > 0 && isValidGameList(gameListGHMirror.value)) {
+        // Priority: Discord API > GitHub Mirror > Bundled
+        if (gameListFromDiscord.value && gameListFromDiscord.value?.length > 0 && isValidGameList(gameListFromDiscord.value)) {
+            gameDB.value = gameListFromDiscord.value as Game[] || [];
+            addLog('Using game list from Discord API. ' + gameListFromDiscord.value.length + ' entries.');
+        } else if (gameListGHMirror.value && gameListGHMirror.value?.length > 0 && isValidGameList(gameListGHMirror.value)) {
             gameDB.value = gameListGHMirror.value as Game[] || [];
             addLog('Using game list from GitHub mirror. ' + gameListGHMirror.value.length + ' entries.');
-        } else if (gameListFromDiscord.value && gameListFromDiscord.value?.length > 0 && isValidGameList(gameListFromDiscord.value)) {
-            gameDB.value = gameListFromDiscord.value as Game[] || [];
-            addLog('Using game list from Discord. ' + gameListFromDiscord.value.length + ' entries.');
         } else {
             // bundled is always present.
-            addLog('Using bundled game list as fallback.' + bundledGameList.value.length + ' entries.');
+            addLog('Using bundled game list as fallback. ' + bundledGameList.value.length + ' entries.');
             gameDB.value = bundledGameList.value;
         }
 
