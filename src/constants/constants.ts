@@ -22,3 +22,7 @@ export function getCurrentOS(): string {
     
     return EXECUTABLE_OS.LINUX; // Default fallback
 }
+
+export function isMacOS(): boolean {
+    return getCurrentOS() === EXECUTABLE_OS.DARWIN;
+}
