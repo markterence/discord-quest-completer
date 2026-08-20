@@ -1,12 +1,21 @@
 <template>
     <div class="text-gray-500 dark:text-gray-400">
-        <h3>
-            The game has multiple platform executables. Please select one to launch:
+        <p v-if="isMac" class="mb-3 text-xs text-gray-500 dark:text-gray-400">
+            A small game window opens while playing. Discord on macOS usually only detects apps with a visible window.
+        </p>
+
+        <h3 v-if="filteredExecutables.length > 0">
+            Select an executable to launch:
         </h3>
 
-        <div v-if="filteredExecutables.length === 0" class="text-sm mt-2 text-yellow-500">
-            No executables available for your platform ({{ currentPlatform }})
-        </div>
+        <p v-if="usingCrossPlatformFallback" class="text-xs mt-2 text-amber-600 dark:text-amber-400">
+            No macOS executable is registered for this game. Using the Windows executable name as a fallback.
+        </p>
+
+        <p v-if="filteredExecutables.length === 0" class="text-sm mt-2 text-yellow-500">
+            Either Discord has not registered any launchable executables for this game.
+            or there are no executables available for your platform ({{ currentPlatform }})
+        </p>
 
         <div class="text-xs mt-2">
             <div v-for="(executable) in filteredExecutables" :key="executable.name"
@@ -54,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { EXECUTABLE_OS, GameActionsKey, getCurrentOS } from '@/constants/constants';
+import { EXECUTABLE_OS, GameActionsKey, getCurrentOS, isMacOS } from '@/constants/constants';
 import { GameActionsProvider, type Game, type GameExecutable } from '@/types/types';
 import { path } from '@tauri-apps/api';
 import { computed, inject } from 'vue';
@@ -71,13 +80,41 @@ const emit = defineEmits<{
 
 const gameActions = inject<GameActionsProvider>(GameActionsKey);
 
+function isValidPath(name: string) {
+    const illegalChars = ['>', '<', ':', '"', '|', '?', '*'];
+    return !illegalChars.some(char => name.includes(char));
+}
+
+const validExecutables = computed(() =>
+    props.game.executables.filter(executable => isValidPath(executable.name))
+);
+
 const currentPlatform = getCurrentOS();
 
+const isMac = isMacOS();
+
 const filteredExecutables = computed(() => {
-    return props.game.executables.filter(executable => {
-        // Filter for current platform only
-        return executable.os === currentPlatform && !isValidPath(executable.name);
-    });
+    const platformMatches = validExecutables.value.filter(
+        executable => executable.os === currentPlatform
+    );
+
+    if (platformMatches.length > 0) {
+        return platformMatches;
+    }
+
+    return validExecutables.value;
+});
+
+const usingCrossPlatformFallback = computed(() => {
+    if (validExecutables.value.length === 0) {
+        return false;
+    }
+
+    return !validExecutables.value.some(executable => executable.os === currentPlatform);
+    // return props.game.executables.filter(executable => {
+    //     // Filter for current platform only
+    //     return executable.os === currentPlatform && !isValidPath(executable.name);
+    // });
 });
 
 function splitExecutableName(executable: GameExecutable) {
@@ -106,11 +143,6 @@ function getFilename(executable: GameExecutable) {
     const last = executable.name.split(/\\|\//).pop();
     // remove file extension if there was none, just return the last section
     return last;
-}
-
-function isValidPath(path: string) {
-    const illegalChars = ['>', '<', ':', '"', '|', '?', '*'];
-    return illegalChars.some(char => path.includes(char));
 }
 
 function handleLaunch(executable: GameExecutable) {

@@ -1,0 +1,7 @@
+{
+  "bundle": {
+    "resources": {
+      "resources/src-win.exe": "data/src-win.exe"
+    }
+  }
+}

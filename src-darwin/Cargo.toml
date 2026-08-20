@@ -1,0 +1,12 @@
+[package]
+name = "src-darwin"
+version = "0.1.0"
+edition = "2021"
+description = "Minimal macOS dummy game runner for Discord Quest Completer"
+
+[[bin]]
+name = "src-darwin"
+path = "src/main.rs"
+
+[dependencies]
+winit = "0.30"

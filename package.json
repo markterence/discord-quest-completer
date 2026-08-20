@@ -9,14 +9,12 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "build:runner:win": "cd ./src-win && cargo build --release && cd ..",
-    "build:runner:linux": "cd ./src-linux && cargo build --release && cd ..",
     "copy:runner:win": "cp ./src-win/target/release/src-win.exe ./src-tauri/resources/src-win.exe",
+    "build:runner:linux": "cd ./src-linux && cargo build --release && cd ..",
     "copy:runner:linux": "cp ./src-linux/target/release/src-linux ./src-tauri/resources/src-linux",
-    "copy:resources": "npm-run-all copy:resources:*",
-    "copy:resources:win": "cp ./src-win/target/release/src-win.exe ./src-tauri/target/release/data/src-win.exe",
-    "copy:resources:linux": "cp ./src-linux/target/release/src-linux ./src-tauri/target/release/data/src-linux",
-    "sync:runner": "npm-run-all build:runner:* copy:runner:*",
-    "build:all": "tauri build && npm run build:runner:linux && npm run copy:runner:linux",
+    "build:runner:darwin": "cd ./src-darwin && cargo build --release && cd ..",
+    "copy:runner:darwin": "cp ./src-darwin/target/release/src-darwin ./src-tauri/resources/src-darwin",
+    "sync:runner": "node scripts/sync-runner.mjs",
     "tauri:dev": "tauri dev"
   },
   "dependencies": {
