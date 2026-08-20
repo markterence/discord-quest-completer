@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import MainLayout from './components/MainLayout.vue';
 import { Pages, useGlobalState } from './composables/app-state';
-import HomeView from './pages/HomeView.vue';
 import HomeViewV2 from './pages/HomeViewV2.vue';
 import Playground from './pages/Playground.vue';
 
