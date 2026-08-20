@@ -52,28 +52,49 @@ async fn create_fake_game(
         game_folder_path.join(executable_name)
     );
 
-    // Ok(format!("Dummy executable copied to: {:?}", target_executable_path))
+    // Create directory
     match std::fs::create_dir_all(&game_folder_path) {
         Ok(_) => {
             println!("Successfully created directory: {:?}", game_folder_path);
         }
         Err(e) => return Err(format!("Failed to create game folder: {}", e)),
     };
-    // copy the dummy executable to the created folder
-    // there is a `template.exe` file along the final build.
+
+    // Platform-specific runner selection
+    #[cfg(target_os = "windows")]
+    let runner_name = "src-win.exe";
+    
+    #[cfg(target_os = "linux")]
+    let runner_name = "src-linux";
+    
+    #[cfg(target_os = "macos")]
+    let runner_name = "src-macos";
+
     let resource_path = handle
         .path()
-        .resolve("data/src-win.exe", BaseDirectory::Resource)
+        .resolve(format!("data/{}", runner_name), BaseDirectory::Resource)
         .unwrap_or_default();
 
-    println!("Creating dummy game executable: {:?}", resource_path);
-    let dummy_executable_path = exe_dir.join("template.exe");
+    println!("Creating dummy game executable from: {:?}", resource_path);
+    
     let target_executable_path = game_folder_path.join(executable_name);
+    
     match std::fs::copy(&resource_path, &target_executable_path) {
-        Ok(_) => Ok(format!(
-            "Dummy executable copied to: {:?}",
-            target_executable_path
-        )),
+        Ok(_) => {
+            // Make executable on Unix systems
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let mut perms = std::fs::metadata(&target_executable_path)
+                    .map_err(|e| format!("Failed to get file metadata: {}", e))?
+                    .permissions();
+                perms.set_mode(0o755);
+                std::fs::set_permissions(&target_executable_path, perms)
+                    .map_err(|e| format!("Failed to set executable permissions: {}", e))?;
+            }
+            
+            Ok(format!("Dummy executable copied to: {:?}", target_executable_path))
+        }
         Err(e) => Err(format!("Failed to copy dummy executable: {}", e)),
     }
 }
@@ -96,13 +117,19 @@ async fn run_background_process(
         .join(app_id.to_string())
         .join(normalized_path);
     let executable_path = game_folder_path.join(executable_name);
-    // const DETACHED_PROCESS: u32 = 0x00000008;
-    // const CREATE_NO_WINDOW: u32 = 0x08000000; // Hide the window
-    match std::process::Command::new(&executable_path)
-        .args(["--title", name])
-        .current_dir(game_folder_path) // Set working directory to the game folder
-        .spawn()
+    
+    let mut cmd = std::process::Command::new(&executable_path);
+    cmd.args(["--title", name])
+       .current_dir(game_folder_path);
+    
+    // Platform-specific process spawning
+    #[cfg(unix)]
     {
+        use std::os::unix::process::CommandExt;
+        cmd.process_group(0); // Create new process group on Unix
+    }
+    
+    match cmd.spawn() {
         Ok(_) => Ok("Process started successfully".to_string()),
         Err(e) => Err(format!("Failed to start process: {}", e)),
     }
@@ -110,21 +137,60 @@ async fn run_background_process(
 
 #[tauri::command(rename_all = "snake_case")]
 async fn stop_process(exec_name: String) -> Result<(), String> {
-    // Stop the process using taskkill command
-    let output = std::process::Command::new("taskkill")
-        .arg("/F")
-        .arg("/IM")
-        .arg(exec_name)
-        .output()
-        .map_err(|e| format!("Failed to execute taskkill: {}", e))?;
+    #[cfg(target_os = "windows")]
+    {
+        let output = std::process::Command::new("taskkill")
+            .arg("/F")
+            .arg("/IM")
+            .arg(exec_name)
+            .output()
+            .map_err(|e| format!("Failed to execute taskkill: {}", e))?;
 
-    if output.status.success() {
-        Ok(())
-    } else {
-        Err(format!(
-            "Failed to stop process: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ))
+        if output.status.success() {
+            Ok(())
+        } else {
+            Err(format!(
+                "Failed to stop process: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ))
+        }
+    }
+    
+    #[cfg(target_os = "linux")]
+    {
+        let output = std::process::Command::new("pkill")
+            .arg("-f")
+            .arg(&exec_name)
+            .output()
+            .map_err(|e| format!("Failed to execute pkill: {}", e))?;
+
+        if output.status.success() || output.status.code() == Some(1) {
+            // pkill returns 1 if no processes were killed, which is fine
+            Ok(())
+        } else {
+            Err(format!(
+                "Failed to stop process: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ))
+        }
+    }
+    
+    #[cfg(target_os = "macos")]
+    {
+        let output = std::process::Command::new("pkill")
+            .arg("-f")
+            .arg(&exec_name)
+            .output()
+            .map_err(|e| format!("Failed to execute pkill: {}", e))?;
+
+        if output.status.success() || output.status.code() == Some(1) {
+            Ok(())
+        } else {
+            Err(format!(
+                "Failed to stop process: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ))
+        }
     }
 }
 

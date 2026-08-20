@@ -4,6 +4,10 @@
             The game has multiple platform executables. Please select one to launch:
         </h3>
 
+        <div v-if="filteredExecutables.length === 0" class="text-sm mt-2 text-yellow-500">
+            No executables available for your platform ({{ currentPlatform }})
+        </div>
+
         <div class="text-xs mt-2">
             <div v-for="(executable) in filteredExecutables" :key="executable.name"
                 class="grid grid-cols-[auto_1fr_auto] gap-2 items-center mb-2 w-full">
@@ -50,9 +54,9 @@
 </template>
 
 <script setup lang="ts">
-import { EXECUTABLE_OS, GameActionsKey } from '@/constants/constants';
+import { EXECUTABLE_OS, GameActionsKey, getCurrentOS } from '@/constants/constants';
 import { GameActionsProvider, type Game, type GameExecutable } from '@/types/types';
-import { path, app } from '@tauri-apps/api';
+import { path } from '@tauri-apps/api';
 import { computed, inject } from 'vue';
 
 const props = defineProps<{
@@ -67,11 +71,12 @@ const emit = defineEmits<{
 
 const gameActions = inject<GameActionsProvider>(GameActionsKey);
 
+const currentPlatform = getCurrentOS();
+
 const filteredExecutables = computed(() => {
     return props.game.executables.filter(executable => {
-        // currently no support for linux and darwin
-        return executable.os !== EXECUTABLE_OS.LINUX && executable.os !== EXECUTABLE_OS.DARWIN
-            && !isValidPath(executable.name);
+        // Filter for current platform only
+        return executable.os === currentPlatform && !isValidPath(executable.name);
     });
 });
 
