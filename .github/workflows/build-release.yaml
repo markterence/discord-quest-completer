@@ -63,12 +63,33 @@ jobs:
           name: tauri-darwin-arm64-release
           path: tauri-darwin-arm64-release
 
+      - name: Download Windows runner
+        uses: actions/download-artifact@v4
+        with:
+          name: runner-win
+          path: runner-win
+
+      - name: Download Linux runner
+        uses: actions/download-artifact@v4
+        with:
+          name: runner-linux
+          path: runner-linux
+
+      - name: Download macOS runner
+        uses: actions/download-artifact@v4
+        with:
+          name: runner-darwin
+          path: runner-darwin
+
       - name: prepare files
         env:
           version: ${{ env.version }}
           win_build_dir: discord-quest-completer-win32-x64-${{ env.version }}
           linux_build_dir: discord-quest-completer-linux-x64-${{ env.version }}
           darwin_build_dir: discord-quest-completer-darwin-arm64-${{ env.version }}
+          runner_win_name: discord-quest-completer-runner-win32-x64-${{ env.version }}.exe
+          runner_linux_name: discord-quest-completer-runner-linux-x64-${{ env.version }}
+          runner_darwin_name: discord-quest-completer-runner-darwin-arm64-${{ env.version }}
         run: |
           mkdir -p ./build/${{ env.win_build_dir }}
           cp tauri-win32-x64-release/discord-quest-completer.exe ./build/${{ env.win_build_dir }}/
@@ -88,9 +109,17 @@ jobs:
           cp -r tauri-darwin-arm64-release/resources/ ./build/${{ env.darwin_build_dir }}/
           zip -r ./build/${{ env.darwin_build_dir }}.zip ./build/${{ env.darwin_build_dir }}
 
+          chmod +x runner-linux/src-linux runner-darwin/src-darwin
+          cp runner-win/src-win.exe ./build/${{ env.runner_win_name }}
+          cp runner-linux/src-linux ./build/${{ env.runner_linux_name }}
+          cp runner-darwin/src-darwin ./build/${{ env.runner_darwin_name }}
+
           echo "win_build_dir=${{ env.win_build_dir }}" >> $GITHUB_ENV
           echo "linux_build_dir=${{ env.linux_build_dir }}" >> $GITHUB_ENV
           echo "darwin_build_dir=${{ env.darwin_build_dir }}" >> $GITHUB_ENV
+          echo "runner_win_name=${{ env.runner_win_name }}" >> $GITHUB_ENV
+          echo "runner_linux_name=${{ env.runner_linux_name }}" >> $GITHUB_ENV
+          echo "runner_darwin_name=${{ env.runner_darwin_name }}" >> $GITHUB_ENV
 
       - name: Create Build Artifacts
         uses: actions/upload-artifact@v4
@@ -100,6 +129,9 @@ jobs:
             ./build/${{ env.win_build_dir }}.zip
             ./build/${{ env.linux_build_dir }}.zip
             ./build/${{ env.darwin_build_dir }}.zip
+            ./build/${{ env.runner_win_name }}
+            ./build/${{ env.runner_linux_name }}
+            ./build/${{ env.runner_darwin_name }}
             tauri-win32-x64-release/bundle/**/*
             tauri-linux-x64-release/bundle/**/*
             tauri-darwin-arm64-release/bundle/**/*
@@ -123,6 +155,9 @@ jobs:
             ./build/${{ env.win_build_dir }}.zip
             ./build/${{ env.linux_build_dir }}.zip
             ./build/${{ env.darwin_build_dir }}.zip
+            ./build/${{ env.runner_win_name }}
+            ./build/${{ env.runner_linux_name }}
+            ./build/${{ env.runner_darwin_name }}
           prerelease: true
           draft: true
         env:

@@ -13,33 +13,27 @@ on:
 jobs:
   runner-win:
     uses: ./.github/workflows/runner-win.yml
-    continue-on-error: true
 
   runner-linux:
     uses: ./.github/workflows/runner-linux.yml
-    continue-on-error: true
 
   runner-darwin:
     uses: ./.github/workflows/runner-darwin.yml
-    continue-on-error: true
 
   build-win:
     needs: runner-win
     uses: ./.github/workflows/build-win.yml
     secrets: inherit
-    continue-on-error: true
 
   build-linux:
     needs: [runner-linux, runner-win]
     uses: ./.github/workflows/build-linux.yml
     secrets: inherit
-    continue-on-error: true
 
   build-darwin:
     needs: runner-darwin
     uses: ./.github/workflows/build-darwin.yml
     secrets: inherit
-    continue-on-error: true
 
   publish:
     needs: [build-win, build-linux, build-darwin]
