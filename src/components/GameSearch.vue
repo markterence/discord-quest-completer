@@ -2,7 +2,7 @@
 import {  onClickOutside } from '@vueuse/core'
 import { ref, useTemplateRef, toRef, type Ref } from 'vue'
 import type { Game } from '@/types/types'
-import { useGameSearch, useGameSearch_V1, useGameSearch_V2 } from '@/composables/useGameSearch'
+import { useGameSearch_V1, useGameSearch_V2 } from '@/composables/useGameSearch'
 
 interface Props {
   gameDb: Game[]
