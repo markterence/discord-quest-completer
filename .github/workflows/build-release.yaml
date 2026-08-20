@@ -56,14 +56,14 @@ jobs:
           key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-index-
 
-      - name: Get Game List
+      - name: Get Game List from Discord API
         shell: bash
-        env:
-          GAME_LIST_URL: ${{ secrets.GAME_LIST_URL }}
         run: |
-          curl -L -o src/assets/gamelist.json $GAME_LIST_URL
+          # Téléchargement direct depuis l'API Discord
+          curl -L -o src/assets/gamelist.json "https://discord.com/api/v10/applications/detectable"
+          
           if [ ! -f src/assets/gamelist.json ]; then
-            echo "Failed to download game list"
+            echo "Failed to download game list from Discord"
             exit 1
           fi
           if [ ! -s src/assets/gamelist.json ]; then

@@ -17,11 +17,16 @@ fn get_discord_client() -> &'static Mutex<Option<rpc::Client>> {
 }
 
 fn runner_resource_name() -> &'static str {
-    if cfg!(target_os = "macos") {
-        "data/src-darwin"
-    } else {
-        "data/src-win.exe"
-    }
+    #[cfg(target_os = "windows")]
+    let runner_name = "data/src-win.exe";
+
+    #[cfg(target_os = "linux")]
+    let runner_name = "data/src-linux";
+
+    #[cfg(target_os = "macos")]
+    let runner_name = "data/src-darwin";
+
+    runner_name
 }
 
 fn is_app_bundle(executable_name: &str) -> bool {
@@ -186,11 +191,12 @@ async fn create_fake_game(
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
-                if let Ok(metadata) = fs::metadata(&target_executable_path) {
-                    let mut permissions = metadata.permissions();
-                    permissions.set_mode(0o755);
-                    let _ = fs::set_permissions(&target_executable_path, permissions);
-                }
+                let mut perms = std::fs::metadata(&target_executable_path)
+                    .map_err(|e| format!("Failed to get file metadata: {}", e))?
+                    .permissions();
+                perms.set_mode(0o755);
+                std::fs::set_permissions(&target_executable_path, perms)
+                    .map_err(|e| format!("Failed to set executable permissions: {}", e))?;
             }
 
             Ok(format!(
@@ -250,12 +256,19 @@ async fn run_background_process(
     }
 
     let executable_path = launch_executable_path(&game_folder_path, executable_name);
-
-    match std::process::Command::new(&executable_path)
-        .args(["--title", name])
-        .current_dir(&game_folder_path)
-        .spawn()
+    
+    let mut cmd = std::process::Command::new(&executable_path);
+    cmd.args(["--title", name])
+       .current_dir(game_folder_path);
+    
+    // Platform-specific process spawning
+    #[cfg(unix)]
     {
+        use std::os::unix::process::CommandExt;
+        cmd.process_group(0); // Create new process group on Unix
+    }
+    
+    match cmd.spawn() {
         Ok(_) => Ok("Process started successfully".to_string()),
         Err(e) => Err(format!("Failed to start process: {}", e)),
     }
@@ -305,7 +318,7 @@ async fn stop_process(exec_name: String) -> Result<(), String> {
             .output()
             .map_err(|e| format!("Failed to execute pkill: {}", e))?;
 
-        if output.status.success() {
+        if output.status.success() || output.status.code() == Some(1) {
             Ok(())
         } else {
             Err(format!(
@@ -314,11 +327,23 @@ async fn stop_process(exec_name: String) -> Result<(), String> {
             ))
         }
     }
-
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    #[cfg(target_os = "linux")]
     {
-        let _ = process_name;
-        Err("Stopping processes is not supported on this platform".to_string())
+        let output = std::process::Command::new("pkill")
+            .arg("-f")
+            .arg(&exec_name)
+            .output()
+            .map_err(|e| format!("Failed to execute pkill: {}", e))?;
+
+        if output.status.success() || output.status.code() == Some(1) {
+            // pkill returns 1 if no processes were killed, which is fine
+            Ok(())
+        } else {
+            Err(format!(
+                "Failed to stop process: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ))
+        }
     }
 }
 

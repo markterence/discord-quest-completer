@@ -12,8 +12,9 @@
             No macOS executable is registered for this game. Using the Windows executable name as a fallback.
         </p>
 
-        <p v-if="filteredExecutables.length === 0" class="text-sm mt-2">
-            Discord has not registered any launchable executables for this game.
+        <p v-if="filteredExecutables.length === 0" class="text-sm mt-2 text-yellow-500">
+            Either Discord has not registered any launchable executables for this game.
+            or there are no executables available for your platform ({{ currentPlatform }})
         </p>
 
         <div class="text-xs mt-2">
@@ -54,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { EXECUTABLE_OS, GameActionsKey } from '@/constants/constants';
+import { EXECUTABLE_OS, GameActionsKey, getCurrentOS, isMacOS } from '@/constants/constants';
 import { GameActionsProvider, type Game, type GameExecutable } from '@/types/types';
 import { path } from '@tauri-apps/api';
 import { computed, inject } from 'vue';
@@ -70,8 +71,6 @@ const emit = defineEmits<{
 }>();
 
 const gameActions = inject<GameActionsProvider>(GameActionsKey);
-const isMac = navigator.userAgent.includes('Mac');
-const currentPlatform = isMac ? EXECUTABLE_OS.DARWIN : EXECUTABLE_OS.WINDOWS;
 
 function isValidPath(name: string) {
     const illegalChars = ['>', '<', ':', '"', '|', '?', '*'];
@@ -81,6 +80,10 @@ function isValidPath(name: string) {
 const validExecutables = computed(() =>
     props.game.executables.filter(executable => isValidPath(executable.name))
 );
+
+const currentPlatform = getCurrentOS();
+
+const isMac = isMacOS();
 
 const filteredExecutables = computed(() => {
     const platformMatches = validExecutables.value.filter(
@@ -100,6 +103,10 @@ const usingCrossPlatformFallback = computed(() => {
     }
 
     return !validExecutables.value.some(executable => executable.os === currentPlatform);
+    // return props.game.executables.filter(executable => {
+    //     // Filter for current platform only
+    //     return executable.os === currentPlatform && !isValidPath(executable.name);
+    // });
 });
 
 function splitExecutableName(executable: GameExecutable) {

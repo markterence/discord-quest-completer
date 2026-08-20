@@ -1,0 +1,23 @@
+[package]
+name = "src-linux"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gtk4 = "0.7"
+glib = "0.18"
+open = "5.0"
+
+[[bin]]
+name = "src-linux"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+overflow-checks = false
+debug = false
+rpath = false
