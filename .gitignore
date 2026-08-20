@@ -28,7 +28,10 @@ dist-ssr
 *.sln
 *.sw?
 
-# Generated Custom Runners & Resources
+_target
+# Exclude binaries and executables these are built by the build process/Generated Custom Runners & Resources
+src-tauri/resources/*.exe
+src-tauri/resources/src-darwin
 src-tauri/resources/src-win.exe
 src-tauri/resources/src-linux
 src-tauri/resources/src-macos

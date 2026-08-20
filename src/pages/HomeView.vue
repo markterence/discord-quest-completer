@@ -18,8 +18,7 @@ import Fuse from 'fuse.js';
 import { useGlobalState } from '@/composables/app-state';
 import TimedNotification from '@/components/TimedNotification.vue';
 
-
-type DialogKey = 
+type DialogKey =
     'none' | 
     'rpc_message_1'|
     'no_game_selected';;
@@ -204,6 +203,7 @@ async function createDummyGame(game: Game | null, executable: GameExecutable) {
             executable_name: executable.filename,
             path_len: executable.segments,
             app_id: Number(gameToInstall.id),
+            display_name: gameToInstall.name,
         }
         console.log(payload);
         const result = await invoke('create_fake_game', payload)
