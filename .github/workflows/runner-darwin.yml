@@ -1,0 +1,50 @@
+name: Build macOS Runner
+
+on:
+  workflow_call:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-registry-
+
+      - name: Cache Cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-index-
+
+      - name: Rust cache (src-darwin)
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-darwin -> target'
+
+      - name: Build src-darwin runner
+        shell: bash
+        run: |
+          cd src-darwin
+          cargo build --release --verbose
+
+      - name: Upload runner artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: runner-darwin
+          retention-days: 3
+          path: src-darwin/target/release/src-darwin

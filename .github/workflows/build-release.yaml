@@ -7,107 +7,35 @@ permissions:
   contents: write
   packages: write
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
-  build-tauri:
-    permissions:
-      contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: 'windows-latest'
-            args: ''
-            x-target: 'win32-x64'
+  runner-win:
+    uses: ./.github/workflows/runner-win.yml
 
-    runs-on: ${{ matrix.platform }}
-    steps:
-      - uses: actions/checkout@v4
+  runner-linux:
+    uses: ./.github/workflows/runner-linux.yml
 
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
-        with:
-          run_install: false
-      
-      - name: setup node
-        uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-          cache: 'pnpm'
+  runner-darwin:
+    uses: ./.github/workflows/runner-darwin.yml
 
-      - name: install Rust stable
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
+  build-win:
+    needs: runner-win
+    uses: ./.github/workflows/build-win.yml
+    secrets: inherit
 
-      - name: Cache Cargo registry
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-registry-
-      
-      - name: Cache Cargo index
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-index-
+  build-linux:
+    needs: [runner-linux, runner-win]
+    uses: ./.github/workflows/build-linux.yml
+    secrets: inherit
 
-      - name: Get Game List from Discord API
-        shell: bash
-        run: |
-          # Téléchargement direct depuis l'API Discord
-          curl -L -o src/assets/gamelist.json "https://discord.com/api/v10/applications/detectable"
-          
-          if [ ! -f src/assets/gamelist.json ]; then
-            echo "Failed to download game list from Discord"
-            exit 1
-          fi
-          if [ ! -s src/assets/gamelist.json ]; then
-            echo "Game list is empty"
-            exit 1
-          fi
-      
-      # Build src-win
-      - name: Build src-win project x86_64 binary
-        if: matrix.platform == 'windows-latest'
-        shell: bash
-        run: | 
-          cd src-win
-          cargo build --release --verbose
-          cd ..
-          cp ./src-win/target/release/src-win.exe ./src-tauri/resources/src-win.exe
-
-      - name: Rust cache (Tauri App)
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: './src-tauri -> target'
-    
-      - name: install frontend dependencies
-        run: pnpm install
-
-      - uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: ${{ matrix.args }}
-      
-      - name: Create artifact for release
-        id: create_artifact_for_release
-        uses: actions/upload-artifact@v4
-        with:
-          name: tauri-win-release
-          path: |
-            src-tauri/target/release/discord-quest-completer.exe
-            src-tauri/target/release/bundle/
-            src-tauri/target/release/data/
-            src-tauri/target/release/resources/
+  build-darwin:
+    needs: runner-darwin
+    uses: ./.github/workflows/build-darwin.yml
+    secrets: inherit
 
   release:
-    needs: build-tauri
+    needs: [build-win, build-linux, build-darwin]
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - name: get version
@@ -117,33 +45,64 @@ jobs:
           echo "version=$version" >> $GITHUB_ENV
         shell: bash
 
-      - name: Download artifact
+      - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
-          name: tauri-win-release
-          path: tauri-win-release
+          name: tauri-win32-x64-release
+          path: tauri-win32-x64-release
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-linux-x64-release
+          path: tauri-linux-x64-release
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-darwin-arm64-release
+          path: tauri-darwin-arm64-release
 
       - name: prepare files
         env:
           version: ${{ env.version }}
-          win_build_release_dir: discord-quest-completer-win32-x64-${{ env.version }}
+          win_build_dir: discord-quest-completer-win32-x64-${{ env.version }}
+          linux_build_dir: discord-quest-completer-linux-x64-${{ env.version }}
+          darwin_build_dir: discord-quest-completer-darwin-arm64-${{ env.version }}
         run: |
-          mkdir -p ./build/${{ env.win_build_release_dir }}
-          cp tauri-win-release/discord-quest-completer.exe ./build/${{ env.win_build_release_dir }}/
-          cp -r tauri-win-release/data/ ./build/${{ env.win_build_release_dir }}/
-          cp -r tauri-win-release/resources/ ./build/${{ env.win_build_release_dir }}/
-          zip -r ./build/${{ env.win_build_release_dir }}.zip ./build/${{ env.win_build_release_dir }}
-          echo "win_build_release_dir=${{ env.win_build_release_dir }}" >> $GITHUB_ENV
+          mkdir -p ./build/${{ env.win_build_dir }}
+          cp tauri-win32-x64-release/discord-quest-completer.exe ./build/${{ env.win_build_dir }}/
+          cp -r tauri-win32-x64-release/data/ ./build/${{ env.win_build_dir }}/
+          cp -r tauri-win32-x64-release/resources/ ./build/${{ env.win_build_dir }}/
+          zip -r ./build/${{ env.win_build_dir }}.zip ./build/${{ env.win_build_dir }}
+
+          mkdir -p ./build/${{ env.linux_build_dir }}
+          cp tauri-linux-x64-release/discord-quest-completer ./build/${{ env.linux_build_dir }}/
+          cp -r tauri-linux-x64-release/data/ ./build/${{ env.linux_build_dir }}/
+          cp -r tauri-linux-x64-release/resources/ ./build/${{ env.linux_build_dir }}/
+          zip -r ./build/${{ env.linux_build_dir }}.zip ./build/${{ env.linux_build_dir }}
+
+          mkdir -p ./build/${{ env.darwin_build_dir }}
+          cp tauri-darwin-arm64-release/discord-quest-completer ./build/${{ env.darwin_build_dir }}/
+          cp -r tauri-darwin-arm64-release/data/ ./build/${{ env.darwin_build_dir }}/
+          cp -r tauri-darwin-arm64-release/resources/ ./build/${{ env.darwin_build_dir }}/
+          zip -r ./build/${{ env.darwin_build_dir }}.zip ./build/${{ env.darwin_build_dir }}
+
+          echo "win_build_dir=${{ env.win_build_dir }}" >> $GITHUB_ENV
+          echo "linux_build_dir=${{ env.linux_build_dir }}" >> $GITHUB_ENV
+          echo "darwin_build_dir=${{ env.darwin_build_dir }}" >> $GITHUB_ENV
 
       - name: Create Build Artifacts
         uses: actions/upload-artifact@v4
-        env: 
-          win_build_release_dir: ${{ env.win_build_release_dir }}
         with:
-          name: ${{ env.win_build_release_dir }}.zip
-          path: | 
-            ./build/${{ env.win_build_release_dir }}.zip
-            tauri-win-release/bundle/**/*
+          name: release-bundles-${{ env.version }}
+          path: |
+            ./build/${{ env.win_build_dir }}.zip
+            ./build/${{ env.linux_build_dir }}.zip
+            ./build/${{ env.darwin_build_dir }}.zip
+            tauri-win32-x64-release/bundle/**/*
+            tauri-linux-x64-release/bundle/**/*
+            tauri-darwin-arm64-release/bundle/**/*
 
       - name: Create and Upload Release
         id: create_release
@@ -152,19 +111,20 @@ jobs:
           tag_name: ${{ env.version }}
           name: Pre-Release ${{ env.version }}
           body: |
-            ![GitHub Downloads (specific asset, specific tag)](https://img.shields.io/github/downloads/markterence/discord-quest-completer/${{ env.version }}/${{ env.win_build_release_dir }}.zip)
+            ![GitHub Downloads (specific asset, specific tag)](https://img.shields.io/github/downloads/markterence/discord-quest-completer/${{ env.version }}/${{ env.win_build_dir }}.zip)
 
             #### Disclaimer
-            This tool is intended for educational purposes and personal use. Please respect Discord's terms of service and game publishers' rights when using this application.  
-            
+            This tool is intended for educational purposes and personal use. Please respect Discord's terms of service and game publishers' rights when using this application.
+
             The creators and maintainers of this project are not liable for any damages, account suspensions, or other consequences that may arise from using this software. Use at your own risk. This project is not affiliated with, endorsed by, or connected to Discord in any way.
           append_body: true
           generate_release_notes: true
           files: |
-            ./build/${{ env.win_build_release_dir }}.zip
+            ./build/${{ env.win_build_dir }}.zip
+            ./build/${{ env.linux_build_dir }}.zip
+            ./build/${{ env.darwin_build_dir }}.zip
           prerelease: true
           draft: true
         env:
           version: ${{ env.version }}
-          win_build_release_dir: ${{ env.win_build_release_dir }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

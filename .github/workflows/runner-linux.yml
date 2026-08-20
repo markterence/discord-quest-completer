@@ -1,0 +1,55 @@
+name: Build Linux Runner
+
+on:
+  workflow_call:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-registry-
+
+      - name: Cache Cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-index-
+
+      - name: Rust cache (src-linux)
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-linux -> target'
+
+      - name: Build src-linux runner
+        shell: bash
+        run: |
+          cd src-linux
+          cargo build --release --verbose
+
+      - name: Upload runner artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: runner-linux
+          retention-days: 3
+          path: src-linux/target/release/src-linux

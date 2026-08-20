@@ -1,0 +1,103 @@
+name: Build Windows App
+
+on:
+  workflow_call:
+    secrets:
+      GAME_LIST_URL:
+        required: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'pnpm'
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-registry-
+
+      - name: Cache Cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-index-
+
+      - name: Rust cache (Tauri App)
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Get Game List
+        shell: bash
+        env:
+          GAME_LIST_URL: ${{ secrets.GAME_LIST_URL }}
+        run: |
+          curl -L -o src/assets/gamelist.json $GAME_LIST_URL
+          if [ ! -f src/assets/gamelist.json ]; then
+            echo "Failed to download game list"
+            exit 1
+          fi
+          if [ ! -s src/assets/gamelist.json ]; then
+            echo "Game list is empty"
+            exit 1
+          fi
+
+      - name: Download Windows runner
+        uses: actions/download-artifact@v4
+        with:
+          name: runner-win
+          path: src-tauri/resources
+
+      - name: install frontend dependencies
+        run: pnpm install
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          includeDebug: true
+
+      - name: Create artifact for release
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-win32-x64-release
+          retention-days: 3
+          path: |
+            src-tauri/target/release/discord-quest-completer.exe
+            src-tauri/target/release/bundle/
+            src-tauri/target/release/data/
+            src-tauri/target/release/resources/
+
+      - name: Create artifact (debug)
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-win32-x64-debug
+          retention-days: 3
+          path: |
+            src-tauri/target/debug/discord-quest-completer.exe
+            src-tauri/target/debug/bundle/
+            src-tauri/target/debug/data/
+            src-tauri/target/debug/resources/

@@ -9,195 +9,120 @@ on:
   schedule:
     - cron: "0 0 */2 * *"   # every 2 days at midnight
   workflow_dispatch:
-  
-env:
-  CARGO_TERM_COLOR: always
 
 jobs:
-  build-tauri:
+  runner-win:
+    uses: ./.github/workflows/runner-win.yml
+    continue-on-error: true
+
+  runner-linux:
+    uses: ./.github/workflows/runner-linux.yml
+    continue-on-error: true
+
+  runner-darwin:
+    uses: ./.github/workflows/runner-darwin.yml
+    continue-on-error: true
+
+  build-win:
+    needs: runner-win
+    uses: ./.github/workflows/build-win.yml
+    secrets: inherit
+    continue-on-error: true
+
+  build-linux:
+    needs: [runner-linux, runner-win]
+    uses: ./.github/workflows/build-linux.yml
+    secrets: inherit
+    continue-on-error: true
+
+  build-darwin:
+    needs: runner-darwin
+    uses: ./.github/workflows/build-darwin.yml
+    secrets: inherit
+    continue-on-error: true
+
+  publish:
+    needs: [build-win, build-linux, build-darwin]
+    if: always()
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: 'windows-latest'
-            args: ''
-            x-target: 'win32-x64'
-
-    runs-on: ${{ matrix.platform }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
-        with:
-          run_install: false
-
-      - name: setup node
-        uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-          cache: 'pnpm'
-
-      - name: install Rust stable
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-      
-      - name: Cache Cargo registry
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-registry-
-
-      - name: Cache Cargo index
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-index-
-
-      - name: Get Game List
-        shell: bash
-        env:
-          GAME_LIST_URL: ${{ secrets.GAME_LIST_URL }}
-        run: |
-          curl -L -o src/assets/gamelist.json $GAME_LIST_URL
-          if [ ! -f src/assets/gamelist.json ]; then
-            echo "Failed to download game list"
-            exit 1
-          fi
-          if [ ! -s src/assets/gamelist.json ]; then
-            echo "Game list is empty"
-            exit 1
-          fi
-      
-      # Build src-win
-      - name: Build src-win project x86_64 binary
-        if: matrix.platform == 'windows-latest'
-        shell: bash
-        run: | 
-          cd src-win
-          cargo build --release --verbose
-          cd ..
-          cp ./src-win/target/release/src-win.exe ./src-tauri/resources/src-win.exe
-
-      - name: Rust cache (Tauri App)
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: './src-tauri -> target'
-
-      - name: install frontend dependencies
-        run: pnpm install
-
-      - uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: ${{ matrix.args }}
-          includeDebug: true
-
-      - name: Create artifact for release
-        id: create_artifact_for_release
-        uses: actions/upload-artifact@v4
-        with:
-          name: tauri-win-release
-          retention-days: 3
-          # pick only the files we need for the release like the binary and the data folder
-          # resource folders and installers.
-          path: |
-            src-tauri/target/release/discord-quest-completer.exe
-            src-tauri/target/release/bundle/
-            src-tauri/target/release/data/
-            src-tauri/target/release/resources/
-
-      - name: Create artifact (debug)
-        id: create_artifact_debug
-        uses: actions/upload-artifact@v4
-        with:
-          name: tauri-win-debug
-          retention-days: 3
-          path: |
-            src-tauri/target/debug/discord-quest-completer.exe
-            src-tauri/target/debug/bundle/
-            src-tauri/target/debug/data/
-            src-tauri/target/debug/resources/
-
-  release-check:
-    needs: build-tauri
-    runs-on: ubuntu-latest
+          - os-name: 'win32-x64'
+          - os-name: 'linux-x64'
+          - os-name: 'darwin-arm64'
     steps:
       - name: get version
-        id: extract_version
         run: |
           version=$(date +"%Y.%m.%d")
           echo "version=$version" >> $GITHUB_ENV
         shell: bash
-      
-      - name: Download artifact
+
+      - name: Download artifacts
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
-          # artifcats: tauri-win-release, tauri-win-debug
-          pattern: tauri-win-*
+          pattern: tauri-${{ matrix.os-name }}-*
           merge-multiple: false
 
       - name: prepare files
         env:
           version: ${{ env.version }}
-          win_build_release_dir: discord-quest-completer-win32-x64-${{ env.version }}
-          win_build_debug_dir: discord-quest-completer-win32-x64-debug-${{ env.version }}
+          build_release_dir: discord-quest-completer-${{ matrix.os-name }}-${{ env.version }}
+          build_debug_dir: discord-quest-completer-${{ matrix.os-name }}-debug-${{ env.version }}
         run: |
-          mkdir -p ./build/${{ env.win_build_release_dir }}
-          cp tauri-win-release/discord-quest-completer.exe ./build/${{ env.win_build_release_dir }}/
-          cp -r tauri-win-release/data/ ./build/${{ env.win_build_release_dir }}/
-          cp -r tauri-win-release/resources/ ./build/${{ env.win_build_release_dir }}/
-          zip -r ./build/${{ env.win_build_release_dir }}.zip ./build/${{ env.win_build_release_dir }}
-          
-          mkdir -p ./build/${{ env.win_build_debug_dir }}
-          cp tauri-win-debug/discord-quest-completer.exe ./build/${{ env.win_build_debug_dir }}/
-          cp -r tauri-win-debug/data/ ./build/${{ env.win_build_debug_dir }}/
-          cp -r tauri-win-debug/resources/ ./build/${{ env.win_build_debug_dir }}/
-          # zip -r ./build/${{ env.win_build_debug_dir }}.zip ./build/${{ env.win_build_debug_dir }}
+          if [ ! -d "tauri-${{ matrix.os-name }}-release" ]; then
+            echo "::notice::No artifacts found for ${{ matrix.os-name }}, skipping (build likely failed)"
+            exit 0
+          fi
 
-          echo "win_build_release_dir=${{ env.win_build_release_dir }}" >> $GITHUB_ENV
-          echo "win_build_debug_dir=${{ env.win_build_debug_dir }}" >> $GITHUB_ENV
+          mkdir -p ./build/${{ env.build_release_dir }}
+          cp tauri-${{ matrix.os-name }}-release/discord-quest-completer* ./build/${{ env.build_release_dir }}/ 2>/dev/null || true
+          cp -r tauri-${{ matrix.os-name }}-release/data/ ./build/${{ env.build_release_dir }}/
+          cp -r tauri-${{ matrix.os-name }}-release/resources/ ./build/${{ env.build_release_dir }}/
+          zip -r ./build/${{ env.build_release_dir }}.zip ./build/${{ env.build_release_dir }}
+
+          mkdir -p ./build/${{ env.build_debug_dir }}
+          cp tauri-${{ matrix.os-name }}-debug/discord-quest-completer* ./build/${{ env.build_debug_dir }}/ 2>/dev/null || true
+          cp -r tauri-${{ matrix.os-name }}-debug/data/ ./build/${{ env.build_debug_dir }}/
+          cp -r tauri-${{ matrix.os-name }}-debug/resources/ ./build/${{ env.build_debug_dir }}/
+
+          echo "build_release_dir=${{ env.build_release_dir }}" >> $GITHUB_ENV
+          echo "build_debug_dir=${{ env.build_debug_dir }}" >> $GITHUB_ENV
 
       - name: Upload Debug Artifacts
+        if: env.build_debug_dir != ''
         uses: actions/upload-artifact@v4
-        env: 
-          win_build_debug_dir: ${{ env.win_build_debug_dir }}
         with:
-          name: ${{ env.win_build_debug_dir }}.zip
+          name: ${{ env.build_debug_dir }}.zip
           retention-days: 3
           path: |
-            ./build/${{ env.win_build_debug_dir }}
-            
+            ./build/${{ env.build_debug_dir }}
+
       - name: Upload Release Artifacts
+        if: env.build_release_dir != ''
         uses: actions/upload-artifact@v4
-        env: 
-          win_build_release_dir: ${{ env.win_build_release_dir }}
         with:
-          name: ${{ env.win_build_release_dir }}.zip
+          name: ${{ env.build_release_dir }}.zip
           retention-days: 3
           path: |
-            ./build/${{ env.win_build_release_dir }}.zip
+            ./build/${{ env.build_release_dir }}.zip
 
       - name: Upload Debug Bundles (Artifacts)
+        if: env.build_debug_dir != ''
         uses: actions/upload-artifact@v4
-        env: 
-          version: ${{ env.version }}
         with:
-          name: bundle-debug-${{ env.version }}.zip
+          name: bundle-debug-${{ matrix.os-name }}-${{ env.version }}.zip
           retention-days: 3
           path: |
-            ./tauri-win-debug/bundle/**/*
+            ./tauri-${{ matrix.os-name }}-debug/bundle/**/*
 
       - name: Upload Release Bundles (Artifacts)
+        if: env.build_release_dir != ''
         uses: actions/upload-artifact@v4
-        env: 
-          version: ${{ env.version }}
         with:
-          name: bundle-release-${{ env.version }}.zip
+          name: bundle-release-${{ matrix.os-name }}-${{ env.version }}.zip
           retention-days: 3
           path: |
-            ./tauri-win-release/bundle/**/*            
+            ./tauri-${{ matrix.os-name }}-release/bundle/**/*
