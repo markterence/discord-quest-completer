@@ -12,11 +12,9 @@ fn main() {
 
         println!("cargo:rustc-link-arg=/NODEFAULTLIB");
         println!("cargo:rustc-link-arg=/ENTRY:mainEntryPoint");
-        println!("cargo:rustc-link-arg=/MERGE:.rdata=.text");
-        println!("cargo:rustc-link-arg=/SECTION:.text,EWR");
+        println!("cargo:rustc-link-arg=/SUBSYSTEM:WINDOWS");
         println!("cargo:rustc-link-arg=/ALIGN:16");
         println!("cargo:rustc-link-arg=/FILEALIGN:16");
-        println!("cargo:rustc-link-arg=/SUBSYSTEM:WINDOWS");
 
         println!("cargo:rustc-link-lib=kernel32");
         println!("cargo:rustc-link-lib=user32");
