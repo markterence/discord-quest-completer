@@ -27,11 +27,19 @@
                 </div>
 
                 <!-- Sections / Breadcrumbs must fade when too long -->
-                <div class="relative overflow-hidden ">
+                <div class="relative overflow-hidden" :title="executable.name">
                     <div class="flex flex-nowrap overflow-x-auto scrollbar-none max-w-full pr-4 fade-right">
-                        <div v-for="(section, i) in splitExecutableName(executable)" :key="i"
+                        <!-- <div v-for="(section, i) in splitExecutableName(executable)" :key="i"
                             class="text-center border border-gray-300 dark:border-gray-700 rounded-md px-2 py-1 mr-1 whitespace-nowrap">
                             <span>{{ section }}</span>
+                        </div> -->
+                        <div v-for="(section, i) in splitExecutableName(executable)" :key="i"
+                            class="flex items-center whitespace-nowrap">
+                            <span 
+                                v-if="i  > 0" 
+                            >/</span>
+                            <span class="px-0.5 py-0.5 whitespace-nowrap">{{ section }}</span>
+                             
                         </div>
                     </div>
                 </div>
@@ -111,7 +119,7 @@ const usingCrossPlatformFallback = computed(() => {
 
 function splitExecutableName(executable: GameExecutable) {
     const allSections = executable.name.split(/\\|\//);
-    
+    return allSections;
     const last = executable.name.split(/\\|\//).pop();
     // remove file extension if there was none, just return the last section
     const name = last?.split('.').slice(0, -1).join('.') || last;
@@ -192,5 +200,28 @@ function handleLaunch(executable: GameExecutable) {
 
 .scrollbar-none::-webkit-scrollbar {
     display: none;
+}
+
+.thin-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 9999px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.35);
 }
 </style>

@@ -8,6 +8,10 @@ use tauri::{path::BaseDirectory, AppHandle, Emitter, Listener, Manager};
 
 mod rpc;
 mod runner;
+mod commands;
+mod event;
+mod process_kill;
+mod platform;
 
 // Global static instance of the Discord client
 static DISCORD_CLIENT: OnceCell<Mutex<Option<rpc::Client>>> = OnceCell::new();
@@ -145,6 +149,7 @@ async fn create_fake_game(
     app_id: i64,
     display_name: Option<String>,
 ) -> Result<String, String> {
+    let _path_len = path_len;
     // Must create in the same directory as the executable to avoid permission issues
     // Get the executable directory to look for config file
     let exe_path: std::path::PathBuf = env::current_exe().unwrap_or_default();
@@ -235,6 +240,7 @@ async fn run_background_process(
     path_len: i64,
     app_id: i64,
 ) -> Result<String, String> {
+    let _path_len = path_len;
     let exe_path = env::current_exe().unwrap_or_default();
     let exe_dir = exe_path.parent().unwrap_or_else(|| Path::new(""));
 
@@ -352,12 +358,13 @@ async fn stop_process(exec_name: String) -> Result<(), String> {
 /// await invoke('connect_to_discord_rpc_3', json, 'connect' | 'disconnect');
 #[tauri::command(rename_all = "snake_case")]
 fn connect_to_discord_rpc_3(handle: AppHandle, activity_json: String, action: String) {
+    let _action = action;
     let app = handle.clone();
 
     let event_connecting = "client_connecting";
     let event_connected = "client_connected";
     let event_disconnect = "event_disconnect";
-    let event_connect = "event_connect";
+    let _event_connect = "event_connect";
 
     let activity = runner::parse_activity_json(&activity_json).unwrap();
 
@@ -365,7 +372,7 @@ fn connect_to_discord_rpc_3(handle: AppHandle, activity_json: String, action: St
         "app_id": activity.app_id,
     });
 
-    let client_option = {
+    let _client_option = {
         let mut client_guard = get_discord_client().lock().unwrap();
         // Take the client out, leaving None in its place
         client_guard.take()
@@ -401,7 +408,7 @@ fn connect_to_discord_rpc_3(handle: AppHandle, activity_json: String, action: St
 
         handle.listen(event_disconnect, move |_| {
             println!("Disconnecting from Discord RPC inner");
-            let disconnect_task = tauri::async_runtime::spawn(async move {
+            let _disconnect_task = tauri::async_runtime::spawn(async move {
                 let client_option = {
                     let mut client_guard = get_discord_client().lock().unwrap();
                     // Take the client out, leaving None in its place
@@ -423,32 +430,25 @@ fn connect_to_discord_rpc_3(handle: AppHandle, activity_json: String, action: St
     });
 }
 
-#[tauri::command(rename_all = "snake_case")]
-async fn fetch_gamelist_gh_mirror() -> tauri::ipc::Response {
-    let res = tauri_plugin_http::reqwest::get("https://markterence.github.io/discord-quest-completer/detectable.json").await;
-    tauri::ipc::Response::new(res.unwrap().text().await.unwrap())
-}
-
-#[tauri::command(rename_all = "snake_case")]
-async fn fetch_gamelist_from_discord() -> tauri::ipc::Response {
-    let res = tauri_plugin_http::reqwest::get("https://discord.com/api/applications/detectable").await;
-    tauri::ipc::Response::new(res.unwrap().text().await.unwrap())
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
+pub fn run() { 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
+        .manage(commands::dispatcher::GameDispatcherState(Mutex::new(
+                std::collections::HashMap::new(),
+        )))
         .invoke_handler(tauri::generate_handler![
             greet,
             create_fake_game,
             stop_process,
             connect_to_discord_rpc_3,
             run_background_process,
-            fetch_gamelist_gh_mirror,
-            fetch_gamelist_from_discord
+            commands::api::fetch_gamelist_gh_mirror,
+            commands::api::fetch_gamelist_from_discord,
+            commands::dispatcher::launch_executable,
+            commands::dispatcher::stop_executable
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

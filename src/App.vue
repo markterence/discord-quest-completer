@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import MainLayout from './components/MainLayout.vue';
 import { Pages, useGlobalState } from './composables/app-state';
-import HomeView from './pages/HomeView.vue';
+import HomeViewV2 from './pages/HomeViewV2.vue';
 import Playground from './pages/Playground.vue';
 
 const appState = useGlobalState();
@@ -11,7 +11,7 @@ const { page } = appState;
 
 <template>
   <MainLayout>
-    <HomeView v-show="page === Pages.HOME"/>
+    <HomeViewV2 v-show="page === Pages.HOME"/>
     <Playground v-show="page === Pages.PLAYGROUND"/>
   </MainLayout>
 </template>
