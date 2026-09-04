@@ -80,31 +80,29 @@ const TRADEMARK_SYMBOL = '\u2122';
 const REGISTERED_SYMBOL = '\u00AE';
 const ignoredSymbols = [COPYRIGHT_SYMBOL, TRADEMARK_SYMBOL, REGISTERED_SYMBOL];
 const ignoredSymbolsRegex = new RegExp(`[${ignoredSymbols.join('')}]`, 'g');
-const fuseOptions = computed<UseFuseOptions<Game>>(() => ({
-    fuseOptions: {
-        // Prioritize name and aliases for searching, then lastly executables
-        keys: [
-            { name: 'name', weight: 0.7 },
-            { name: 'aliases', weight: 0.2 },
-            { name: 'executables.name', weight: 0.1 },
-        ],
-        getFn: (obj: any, path: string[] | string) => {
-            const value = Fuse.config.getFn(obj, path);
-            return typeof value === "string"
-            ? value.replace(ignoredSymbolsRegex, "")
-            : value;
-        },
-        isCaseSensitive: false,
-        threshold: 0.5,        
-        // A score of 0indicates a perfect match, while a score of 1 indicates a complete mismatch
-        includeScore: true,
-        includeMatches: false
-    },
-    resultLimit: 12,
-    matchAllWhenSearchEmpty: false,
-}));
+const searchResults = computed(() => {
+    const raw = debouncedSearchQuery.value;
+    if (!raw) return [];
+    const query = raw.toLowerCase().trim().replace(ignoredSymbolsRegex, "");
+    if (!query) return [];
 
-const { results: searchResults } = useFuse(debouncedSearchQuery, gameDB, fuseOptions)
+    const results: { item: Game }[] = [];
+    const db = gameDB.value || [];
+    for (let i = 0; i < db.length; i++) {
+        const game = db[i];
+        if (!game || !game.name) continue;
+        const nameLower = game.name.toLowerCase();
+        if (
+            nameLower.includes(query) ||
+            (game.aliases && game.aliases.some(alias => alias && alias.toLowerCase().includes(query))) ||
+            (game.executables && game.executables.some(exe => exe && exe.name && exe.name.toLowerCase().includes(query)))
+        ) {
+            results.push({ item: game });
+            if (results.length >= 15) break;
+        }
+    }
+    return results;
+});
 
 // Selected games list
 const gameList = ref<Game[]>([]);

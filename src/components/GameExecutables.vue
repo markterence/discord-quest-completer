@@ -9,7 +9,7 @@
         </h3>
 
         <p v-if="usingCrossPlatformFallback" class="text-xs mt-2 text-amber-600 dark:text-amber-400">
-            No macOS executable is registered for this game. Using the Windows executable name as a fallback.
+            No {{ currentPlatform === 'linux' ? 'Linux' : 'macOS' }} executable is registered for this game. Using the Windows executable name as a fallback.
         </p>
 
         <p v-if="filteredExecutables.length === 0" class="text-sm mt-2 text-yellow-500">

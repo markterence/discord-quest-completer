@@ -35,3 +35,11 @@ src-tauri/resources/src-darwin
 src-tauri/resources/src-win.exe
 src-tauri/resources/src-linux
 src-tauri/resources/src-macos
+
+# Local testing files
+detectable_games.json
+games/
+__pycache__/
+discord_quest_linux.py
+src-tauri/resources/data/
+release_dist/

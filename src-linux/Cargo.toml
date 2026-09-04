@@ -1,12 +1,10 @@
 [package]
 name = "src-linux"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
-[dependencies]
-gtk4 = "0.7"
-glib = "0.18"
-open = "5.0"
+[build-dependencies]
+cc = "1.0"
 
 [[bin]]
 name = "src-linux"

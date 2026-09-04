@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 
 const isWindows = process.platform === "win32";
 const isDarwin = process.platform === "darwin";
+const isLinux = process.platform === "linux";
 
 function run(command, args) {
   const result = spawnSync(command, args, { stdio: "inherit", shell: false });
@@ -17,7 +18,11 @@ if (isWindows) {
 } else if (isDarwin) {
   run("pnpm", ["run", "build:runner:darwin"]);
   run("pnpm", ["run", "copy:runner:darwin"]);
+} else if (isLinux) {
+  run("pnpm", ["run", "build:runner:linux"]);
+  run("pnpm", ["run", "copy:runner:linux"]);
 } else {
   console.error(`Unsupported platform for runner sync: ${process.platform}`);
   process.exit(1);
 }
+

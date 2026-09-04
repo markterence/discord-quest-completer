@@ -1,7 +1,7 @@
 import { Game } from '@/types/types';
 import { fetch, ClientOptions } from '@tauri-apps/plugin-http';
 import { tryOnMounted, useAsyncState } from '@vueuse/core';
-import { ref, watch } from 'vue';
+import { ref, watch, shallowRef } from 'vue';
 import { message } from '@tauri-apps/plugin-dialog'; 
 import { invoke } from '@tauri-apps/api/core';
 import { useGlobalState } from './app-state';
@@ -58,7 +58,7 @@ export function useFetchGameList() {
 
     const fetchError = ref<string | null>(null);
 
-    const gameDB = ref<Game[]>([]);
+    const gameDB = shallowRef<Game[]>([]);
 
     const allFetchDone = ref(false);
 
