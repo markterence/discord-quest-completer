@@ -72,11 +72,11 @@ function discordTest() {
     invoke('connect_to_discord_rpc_3', {
         activity_json: JSON.stringify({
             app_id: appIdCode,
-            details: 'Jhabol',
+            details: '7twxxNvrDIE',
             // details: 'xmonad -> dwm -> spectrwm -> i3 -> bspwm -> qtile -> hyrpland -> xfce -> gnome -> sway',
-            state: "/jhabol",
-            activity_kind: ActivityKind.Watching,
-            timestamp: createAgoTimestamp('1h 30m')
+            state: "/7twxxNvrDIE",
+            activity_kind: ActivityKind.Playing,
+            timestamp: createAgoTimestamp('1000h')
         }),
         action: 'connect',
     });
