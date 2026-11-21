@@ -106,8 +106,99 @@ jobs:
             src-tauri/target/release/data/
             src-tauri/target/release/resources/
 
+  build-tauri-macos:
+    permissions:
+      contents: write
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'pnpm'
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: x86_64-apple-darwin
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-registry-
+
+      - name: Cache Cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-index-
+
+      - name: Get Game List from Discord API
+        shell: bash
+        run: |
+          curl -L -o src/assets/gamelist.json "https://discord.com/api/v10/applications/detectable"
+
+          if [ ! -f src/assets/gamelist.json ]; then
+            echo "Failed to download game list from Discord"
+            exit 1
+          fi
+          if [ ! -s src/assets/gamelist.json ]; then
+            echo "Game list is empty"
+            exit 1
+          fi
+
+      - name: Build src-darwin project x86_64 binary
+        shell: bash
+        run: |
+          cd src-darwin
+          cargo build --release --target x86_64-apple-darwin --verbose
+          cd ..
+          cp ./src-darwin/target/x86_64-apple-darwin/release/src-darwin ./src-tauri/resources/src-darwin
+
+      - name: install frontend dependencies
+        run: pnpm install
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: --target x86_64-apple-darwin --config src-tauri/tauri.macos.conf.json
+
+      - name: Package macOS app bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle_dir="src-tauri/target/x86_64-apple-darwin/release/bundle/macos"
+          app_paths=("$bundle_dir"/*.app)
+          if [ "${#app_paths[@]}" -ne 1 ] || [ ! -d "${app_paths[0]}" ]; then
+            echo "Expected exactly one macOS app bundle in $bundle_dir"
+            exit 1
+          fi
+          ditto -c -k --sequesterRsrc --keepParent \
+            "${app_paths[0]}" \
+            "$bundle_dir/discord-quest-completer-macos-x64.app.zip"
+
+      - name: Create macOS build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-macos-release
+          path: src-tauri/target/x86_64-apple-darwin/release/bundle/
+
   release:
-    needs: build-tauri
+    needs:
+      - build-tauri
+      - build-tauri-macos
     runs-on: ubuntu-latest
     steps:
       - name: get version
@@ -123,11 +214,19 @@ jobs:
           name: tauri-win-release
           path: tauri-win-release
 
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-macos-release
+          path: tauri-macos-release
+
       - name: prepare files
         env:
           version: ${{ env.version }}
           win_build_release_dir: discord-quest-completer-win32-x64-${{ env.version }}
+          mac_build_release_dir: discord-quest-completer-macos-x64-${{ env.version }}
         run: |
+          set -euo pipefail
           mkdir -p ./build/${{ env.win_build_release_dir }}
           cp tauri-win-release/discord-quest-completer.exe ./build/${{ env.win_build_release_dir }}/
           cp -r tauri-win-release/data/ ./build/${{ env.win_build_release_dir }}/
@@ -135,14 +234,31 @@ jobs:
           zip -r ./build/${{ env.win_build_release_dir }}.zip ./build/${{ env.win_build_release_dir }}
           echo "win_build_release_dir=${{ env.win_build_release_dir }}" >> $GITHUB_ENV
 
+          mkdir -p ./build/${{ env.mac_build_release_dir }}
+          mac_dmg_paths=("tauri-macos-release/dmg"/*.dmg)
+          mac_app_zip_paths=("tauri-macos-release/macos"/*.app.zip)
+          if [ "${#mac_dmg_paths[@]}" -ne 1 ] || [ ! -f "${mac_dmg_paths[0]}" ]; then
+            echo "Expected exactly one macOS DMG in tauri-macos-release/dmg"
+            exit 1
+          fi
+          if [ "${#mac_app_zip_paths[@]}" -ne 1 ] || [ ! -f "${mac_app_zip_paths[0]}" ]; then
+            echo "Expected exactly one macOS app ZIP in tauri-macos-release/macos"
+            exit 1
+          fi
+          cp "${mac_dmg_paths[0]}" ./build/${{ env.mac_build_release_dir }}/
+          cp "${mac_app_zip_paths[0]}" ./build/${{ env.mac_build_release_dir }}/
+          echo "mac_build_release_dir=${{ env.mac_build_release_dir }}" >> $GITHUB_ENV
+
       - name: Create Build Artifacts
         uses: actions/upload-artifact@v4
-        env: 
+        env:
           win_build_release_dir: ${{ env.win_build_release_dir }}
+          mac_build_release_dir: ${{ env.mac_build_release_dir }}
         with:
           name: ${{ env.win_build_release_dir }}.zip
-          path: | 
+          path: |
             ./build/${{ env.win_build_release_dir }}.zip
+            ./build/${{ env.mac_build_release_dir }}
             tauri-win-release/bundle/**/*
 
       - name: Create and Upload Release
@@ -162,9 +278,11 @@ jobs:
           generate_release_notes: true
           files: |
             ./build/${{ env.win_build_release_dir }}.zip
+            ./build/${{ env.mac_build_release_dir }}/*
           prerelease: true
           draft: true
         env:
           version: ${{ env.version }}
           win_build_release_dir: ${{ env.win_build_release_dir }}
+          mac_build_release_dir: ${{ env.mac_build_release_dir }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
